@@ -42,6 +42,9 @@ public class TickerBarListener extends AbstractKafkaListener {
 	private double cumSMADistance;
 	private double avgSMADistance;
 	
+	private double cumEMADistance;
+	private double avgEMADistance;
+	
 	private int window10 = 10;
 	private int window20 = 20;
 	
@@ -78,6 +81,9 @@ public class TickerBarListener extends AbstractKafkaListener {
 	
 	private Integer qty = 1;
 	
+	
+	private StringBuffer sbf = new StringBuffer();
+	
 	public TickerBarListener() {
 
 	}
@@ -85,7 +91,7 @@ public class TickerBarListener extends AbstractKafkaListener {
 	@PostConstruct
 	void init() {
 		tickerId = Long.parseLong(tickerIdStr);
-		logger.info("barTime, bar.isBullish(), SMA10 - SMA20, barClose - SMA10, barOpen - SMA10, barClose - SMA20,barOpen - SMA20, avgSMADistance ");
+		logger.info("barId, barTime, bar.isBullish(), Ema10, Ema20, EMA10 - EMA20, barClose - EMA10, barOpen - EMA10, barClose - EMA20,barOpen - EMA20, avgEMADistance, openLongPosition, closeLongPosition, openShortPosition, closeShortPosition");
 	}
 
 	/**
@@ -132,12 +138,15 @@ public class TickerBarListener extends AbstractKafkaListener {
 
 		if (bars10.size() == window10) {
 			currentBar.setSma10(TradingUtils.sma(bars10, window10));
-			
 			bars10.pop();
-
 		}
 		if (bars20.size() == window20) {
 			currentBar.setSma20(TradingUtils.sma(bars20, window20));
+			
+			logger.info("bars20.get(0) : "+bars20.get(0));
+			logger.info("bars20.get(9) : "+bars20.get(9));
+			
+			logger.info(bars20.get(0).getBarClose() - bars20.get(9).getBarClose());
 			
 			bars20.pop();
 		}
@@ -177,6 +186,7 @@ public class TickerBarListener extends AbstractKafkaListener {
 			logger.info("COUNTER = "+counter);
 			logger.info("TOTAL REALIZED PNL = "+totalPnl);
 			
+			logger.info(sbf.toString());
 			return;
 		}		
 		
@@ -192,86 +202,24 @@ public class TickerBarListener extends AbstractKafkaListener {
 		cumSMADistance += Math.abs(currentBar.getSma10() - currentBar.getSma20());
 		avgSMADistance = (cumSMADistance / counter);
 		
-		//we don't open a poistion if we have a short position
-		if(openLongPosition && !shortPositionOpened)
-		{
-			limitPrice = currentBar.getBarOpen();
-			openLongPosition = false;
-			closeLongPosition = false;
-			longPositionOpened = true;
-			openPositionTime = currentBar.getBarTime();
-			
-			logger.info(" OOOOOOOOOOOOOOOOOOOOO> Long Position opened at "+openPositionTime+", BUY limit@"+limitPrice +", stop@"+longStopPrice);
-			
-		}
+		cumEMADistance += Math.abs(currentBar.getEma10() - currentBar.getEma20());
+		avgEMADistance = (cumEMADistance / counter);
 		
-		if(openShortPosition && !longPositionOpened)
-		{
-			limitPrice = currentBar.getBarOpen();
-			openShortPosition = false;
-			closeShortPosition = false;
-			shortPositionOpened = true;
-			
-			logger.info(" OOOOOOOOOOOOOOOOOOOOO> Short Position opened at "+openPositionTime+", SELL limit@"+limitPrice +", stop@"+shortStopPrice);
-		}
 		
-		if(closeLongPosition)
-		{
-			closePositionTime = currentBar.getBarTime();
-			
-			logger.info("CCCCCCCCCCCCCCCCCCCCCC> Position closed at "+ closePositionTime+", limitPrice@"+currentBar.getBarOpen());
-
-			pnl = (currentBar.getBarOpen() - limitPrice)*qty;
-			totalPnl += pnl;
-			
-			if(pnl < 0.0)
-			{
-				logger.info("Negative PNL ?!!");
-			}
-			
-			logger.info("############################ Long position Realized pnl from "+openPositionTime+" to "+closePositionTime+" = "+pnl);
-			logger.info("############################ Realized totalPnl = "+totalPnl +" points");
-					
-			initAll();
-			
-			positionCounter++;
-			
-			logger.info("########################## "+positionCounter + " positions opened and closed ##########################");
-		}
-		
-		if(closeShortPosition)
-		{
-			closePositionTime = currentBar.getBarTime();
-			
-			logger.info("CCCCCCCCCCCCCCCCCCCCCC> Position closed at "+ closePositionTime+", limitPrice@"+currentBar.getBarOpen());
-			
-			pnl = (limitPrice - currentBar.getBarOpen() ) * qty;
-			totalPnl += pnl;
-			
-			if(pnl < 0.0)
-			{
-				logger.info("Negative PNL ?!!");
-			}
-			
-			logger.info("############################ Short position Realized pnl from "+openPositionTime+" to "+closePositionTime+" = "+pnl);
-			logger.info("############################ Realized totalPnl = "+totalPnl+" points");
-			
-			initAll();
-			
-			positionCounter++;
-			
-			logger.info("########################## "+positionCounter + " positions opened and closed ##########################");
-		}
-		
+		sb.append(currentBar.getBarId()).append(", ");
 		sb.append(currentBar.getBarTime()).append(", ");
-		sb.append(currentBar.isBullish() ? "Bullish Bar" : "Bearish bar").append(", ");
-		sb.append((currentBar.getSma10() - currentBar.getSma20())).append(", ");
-		sb.append((currentBar.getBarOpen() - currentBar.getSma10())).append(", ");
-		sb.append((currentBar.getBarClose() - currentBar.getSma20())).append(", ");
-		sb.append((currentBar.getBarOpen() - currentBar.getSma20())).append(", ");
-		sb.append(avgSMADistance).append(", ");
+		sb.append(currentBar.isBullish() ? "Bullish" : "Bearish").append(", ");
+		sb.append(currentBar.getEma10()).append(", ");
+		sb.append(currentBar.getEma20()).append(", ");
+		sb.append((currentBar.getEma10() - currentBar.getEma20())).append(", ");
+		sb.append((currentBar.getBarOpen() - currentBar.getEma10())).append(", ");
+		sb.append((currentBar.getBarClose() - currentBar.getEma20())).append(", ");
+		sb.append((currentBar.getBarOpen() - currentBar.getEma20())).append(", ");
+		sb.append(avgEMADistance).append(", ");
 		sb.append(openLongPosition).append(", ");
 		sb.append(closeLongPosition).append(", ");
+		sb.append(openShortPosition).append(", ");
+		sb.append(closeShortPosition).append(", ");
 		
 		logger.info(sb.toString());
 
@@ -285,21 +233,32 @@ public class TickerBarListener extends AbstractKafkaListener {
 		 * 
 		 */
 		
-		if(!longPositionOpened && openLongPositionSignal(previousBar, currentBar))
+		if(!longPositionOpened && downTrend(bars20) && openLongPositionSignal(previousBar, currentBar))
 		{
 			openLongPosition = true; //open position in the next bar
 			longStopPrice = previousBar.getBarLow();
 			
+			logger.info("bars20.get(0) : "+bars20.get(0));
+			logger.info("bars20.get(9) : "+bars20.get(9));
+			
+			logger.info("Trend : "+(bars20.get(0).getBarClose() - bars20.get(9).getBarClose()));
+			
+			
 			logger.info("===========> Buy signal detected @ "+currentBar.getBarTime()+", Open position at next bar");
 		}
 		
-		//open a short position in the next bar
-		if(!shortPositionOpened && openShortPositionSignal(previousBar, currentBar))
+		/*
+		 * conditions:
+		 * 		- No short position is still open
+		 * 		- previous uptrend
+		 * 		- short position signal
+		 */
+		if(!shortPositionOpened && upTrend(bars20) && openShortPositionSignal(previousBar, currentBar))
 		{
 			openShortPosition = true; //open position in the next bar
 			shortStopPrice = previousBar.getBarHigh();
 			
-			logger.info("===========> Sell signal detected @ "+currentBar.getBarTime()+", Open position at next bar");
+			logger.info("===========> Sell signal detected @ "+currentBar.getBarTime()+", Open short position");
 		}
 		
 		// we close a long position if it was already opened
@@ -310,14 +269,13 @@ public class TickerBarListener extends AbstractKafkaListener {
 			logger.info("===========> Close position signal detected @ "+currentBar.getBarTime());
 			
 		}
-		
 				
 		// we open a short position
 		if(!shortPositionOpened && openShortPositionSignal(previousBar, currentBar))
 		{
 			openShortPosition = true;
 			shortStopPrice = previousBar.getBarHigh(); 
-			logger.info("===========> Close position signal detected @ "+currentBar.getBarTime()+" , Open position at next bar");
+			logger.info("===========> Close position signal detected @ "+currentBar.getBarTime()+" , Open long position");
 		}
 		
 		//we close a short position if it was already opened
@@ -354,6 +312,87 @@ public class TickerBarListener extends AbstractKafkaListener {
 			logger.info("Mixed signals received, IGNORE");
 			initAll();
 		}
+		
+		//we don't open a poistion if we have a short position
+		if(openLongPosition && !shortPositionOpened)
+		{
+			limitPrice = currentBar.getBarOpen();
+			openLongPosition = false;
+			closeLongPosition = false;
+			longPositionOpened = true;
+			openPositionTime = currentBar.getBarTime();
+			
+			logger.info(" OOOOOOOOOOOOOOOOOOOOO> Long Position opened at "+openPositionTime+", BUY limit@"+limitPrice +", stop@"+longStopPrice);
+			
+		}
+		
+		if(openShortPosition && !longPositionOpened)
+		{
+			limitPrice = currentBar.getBarOpen();
+			openShortPosition = false;
+			closeShortPosition = false;
+			shortPositionOpened = true;
+			openPositionTime = currentBar.getBarTime();
+			
+			logger.info(" OOOOOOOOOOOOOOOOOOOOO> Short Position opened at "+openPositionTime+", SELL limit@"+limitPrice +", stop@"+shortStopPrice);
+		}
+		
+		if(closeLongPosition)
+		{
+			closePositionTime = currentBar.getBarTime();
+			
+			logger.info("CCCCCCCCCCCCCCCCCCCCCC> Position closed at "+ closePositionTime+", limitPrice@"+currentBar.getBarOpen());
+
+			pnl = (currentBar.getBarOpen() - limitPrice)*qty;
+			totalPnl += pnl;
+			
+			if(pnl < 0.0)
+			{
+				logger.info("Negative PNL ?!!");
+			}
+			
+			sbf.append("Long Position opened on "+ openPositionTime +" and closed on "+closePositionTime+", with realize pnl = "+pnl );
+			sbf.append("\n");
+			
+			logger.info("############################ Long position Realized pnl from "+openPositionTime+" to "+closePositionTime+" = "+pnl);
+			logger.info("############################ Realized totalPnl = "+totalPnl +" points");
+					
+			initAll();
+			
+			positionCounter++;
+			
+			logger.info("########################## "+positionCounter + " positions opened and closed ##########################");
+		}
+		
+		if(closeShortPosition)
+		{
+			closePositionTime = currentBar.getBarTime();
+			
+			logger.info("CCCCCCCCCCCCCCCCCCCCCC> Position closed at "+ closePositionTime+", limitPrice@"+currentBar.getBarOpen());
+			
+			pnl = (limitPrice - currentBar.getBarOpen() ) * qty;
+			totalPnl += pnl;
+			
+			if(pnl < 0.0)
+			{
+				logger.info("Negative PNL ?!!");
+			}
+			
+			sbf.append("Short Position opened on "+ openPositionTime +" and closed on "+closePositionTime+", with realize pnl = "+pnl );
+			sbf.append("\n");
+			
+			logger.info("############################ Short position Realized pnl from "+openPositionTime+" to "+closePositionTime+" = "+pnl);
+			logger.info("############################ Realized totalPnl = "+totalPnl+" points");
+			
+			initAll();
+			
+			positionCounter++;
+			
+			logger.info("########################## "+positionCounter + " positions opened and closed ##########################");
+		}
+				
+				
+				
 		previousBar = currentBar;
 		
 		counter++;
@@ -454,26 +493,34 @@ public class TickerBarListener extends AbstractKafkaListener {
 	/**
 	 * 
 	 * @param previousBar
-	 * @param bar
+	 * @param currentBar
 	 * @return
 	 */
-	private boolean longOpenSignal_sma(Bar previousBar, Bar bar)
+	private boolean longOpenSignal_ema(Bar previousBar, Bar currentBar)
 	{
+		
+		boolean signal = false;
+		
 		if(previousBar.isBullish() && previousBar.body() > avgBarBody 
 				&& previousBar.getBarVolume() > avgVolume)
 		{
 			logger.info("maybe strong signal, long bullish candle with high volume");
 		}
 		
-		if(Math.abs(bar.getSma10() - bar.getSma20()) > avgSMADistance)
+		if(Math.abs(currentBar.getEma10() - currentBar.getEma20()) > avgEMADistance)
 		{
-			logger.info("distance between SMA10 and SMA20 is getting wider");
+			logger.info("distance between EMA10 and EMA20 is getting wider");
 		}
-		return (bar.getSma20() - bar.getSma10()) > avgSMADistance
-		 &&  previousBar.getBarOpen() <  previousBar.getSma10() 
-		 &&  previousBar.getBarClose() > previousBar.getSma10() 
-		 &&  bar.getBarOpen() > bar.getSma10()
-		 && bar.getBarClose() > bar.getSma20();
+		
+		signal =   previousBar.getEma20() - previousBar.getEma10() > avgEMADistance;
+		signal &=   currentBar.getEma20() - currentBar.getEma10() < previousBar.getEma20() - previousBar.getEma10(); //distance narrowing
+		signal &=   previousBar.getBarOpen() <  previousBar.getEma10();
+		signal &= 	previousBar.getBarClose() > previousBar.getEma10();
+		signal &= 	currentBar.getBarOpen() > currentBar.getEma10();
+		signal &= 	currentBar.getBarClose() > currentBar.getEma20();
+
+		return signal; 
+		
 	}
 	
 	/**
@@ -496,10 +543,13 @@ public class TickerBarListener extends AbstractKafkaListener {
 	 * @param currentBar
 	 * @return
 	 */
-	private boolean longOpenSignal_ema(Bar previousBar, Bar currentBar)
+	private boolean longOpenSignal_ema_confirm
+	(Bar previousBar, Bar currentBar)
 	{
 		//ema10 was below ema20 in the previous bar and now gets above it
-		return previousBar.getEma10() < previousBar.getEma20() && currentBar.getEma10() > currentBar.getEma20();
+		return previousBar.getEma10()>0 && previousBar.getEma20() > 0
+				&& previousBar.getEma10() < previousBar.getEma20() 
+				&& currentBar.getEma10() > currentBar.getEma20();
 	}
 	
 	/**
@@ -511,7 +561,9 @@ public class TickerBarListener extends AbstractKafkaListener {
 	private boolean longCloseSignal_ema(Bar previousBar, Bar currentBar)
 	{
 		//ema10 was above ema20 in the previous bar and now gets below it
-		return previousBar.getEma10() > previousBar.getEma20() && currentBar.getEma10() < currentBar.getEma20();
+		return previousBar.getEma10()>0 && previousBar.getEma20() > 0
+				&& previousBar.getEma10() > previousBar.getEma20() 
+				&& currentBar.getEma10() < currentBar.getEma20();
 	}
 	
 	/**
@@ -523,7 +575,9 @@ public class TickerBarListener extends AbstractKafkaListener {
 	private boolean shortOpenSignal_ema(Bar previousBar, Bar currentBar)
 	{
 		//ema10 was above ema20 in the previous bar and now gets below it
-		return previousBar.getEma10() > previousBar.getEma20() && currentBar.getEma10() < currentBar.getEma20();
+		return (previousBar.getEma10() > 0 && previousBar.getEma20() > 0
+				&& previousBar.getEma10() > previousBar.getEma20() 
+				&& currentBar.getEma10() < currentBar.getEma20());
 	}
 	
 	/**
@@ -535,9 +589,21 @@ public class TickerBarListener extends AbstractKafkaListener {
 	private boolean shortCloseSignal_ema(Bar previousBar, Bar currentBar)
 	{
 		//ema10 was below ema20 in the previous bar and now gets above it
-		return previousBar.getEma10() < previousBar.getEma20() && currentBar.getEma10() > currentBar.getEma20();
+		return previousBar.getEma10() > 0 && previousBar.getEma20() > 0
+				&& previousBar.getEma10() < previousBar.getEma20() 
+				&& currentBar.getEma10() > currentBar.getEma20();
 	}
 	
+	
+	private boolean downTrend(LinkedList<Bar> bars20)
+	{		
+		return bars20.getFirst().getBarClose() - bars20.getLast().getBarClose() > 3.5;
+	}
+	
+	private boolean upTrend(LinkedList<Bar> bar20)
+	{
+		return bars20.getFirst().getBarClose() - bars20.getLast().getBarClose() < 3.5;
+	}
 	
 	public void stopTrading()
 	{
