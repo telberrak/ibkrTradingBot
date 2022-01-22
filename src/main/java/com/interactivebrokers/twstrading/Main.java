@@ -26,9 +26,9 @@ public class Main {
 	public CommandLineRunner commandLineRunner(ApplicationContext ctx) {
 		return args -> {
 
-			//processor.start();
+		 //processor.start();
 			
-			strategySimulator.startSimulation();
+		 strategySimulator.startSimulation();
 
 		};
 	}

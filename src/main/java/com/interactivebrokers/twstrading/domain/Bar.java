@@ -48,15 +48,103 @@ public class Bar {
 	private String timeFrame;
 	
 	@Transient
-	private double ema0;
+	private double ema10;
 	@Transient
-	private double ema1;
+	private double ema20;
 	@Transient
-	private double ema2;
+	private double ema9;
 	@Transient
-	private double vma;
+	private double ema21;
+	@Transient
+	private double vwap;
+	@Transient
+	private double sma10;
+	@Transient
+	private double sma20;
+	@Transient
+	private double sma9;
+	@Transient
+	private double sma21;
 	
 
+	
+	public double body()
+	{
+		return Math.abs(barOpen - barClose);
+	}
+	
+	public double range()
+	{
+		return barHigh - barLow;
+	}
+	
+	public double tail()
+	{
+		return isBearish() ? (barClose - barLow) : (barOpen - barLow); 
+	}
+	
+	public double head()
+	{
+		return isBearish() ? (barHigh - barOpen) : (barHigh - barClose); 
+	}
+	/**
+	 * 
+	 * @return
+	 */
+	public boolean isBearish()
+	{
+		return this.getBarClose() < this.getBarOpen();
+	}
+	
+	/**
+	 * 
+	 * @return
+	 */
+	public boolean isBullish()
+	{
+		return this.getBarClose() > this.getBarOpen();
+	}
+	
+	/**
+	 * 
+	 * @return
+	 */
+	public boolean isSMA10Breached()
+	{
+		return (isBullish() && this.getBarOpen() < this.getSma10() && this.getBarClose() > this.getSma10())
+				||(isBearish() && this.getBarOpen() > this.getSma10() && this.getBarClose() < this.getSma10());
+	}
+	
+	/**
+	 * 
+	 * @return
+	 */
+	public boolean isSMA200Breached()
+	{
+		return (isBullish() && this.getBarOpen() < this.getSma20() && this.getBarClose() > this.getSma20())
+				||(isBearish() && this.getBarOpen() > this.getSma20() && this.getBarClose() < this.getSma20());
+	}
+	
+	/**
+	 * 
+	 * @return
+	 */
+	public boolean isEMA10Breached()
+	{
+		return (isBullish() && this.getBarOpen() < this.getEma10() && this.getBarClose() > this.getEma10())
+				||(isBearish() && this.getBarOpen() > this.getEma10() && this.getBarClose() < this.getEma10());
+	}
+	
+	/**
+	 * 
+	 * @return
+	 */
+	public boolean isEMA200Breached()
+	{
+		return (isBullish() && this.getBarOpen() < this.getEma20() && this.getBarClose() > this.getEma20())
+				||(isBearish() && this.getBarOpen() > this.getEma20() && this.getBarClose() < this.getEma20());
+	}
+	
 	public String getTimeFrame() {
 		return timeFrame;
 	}
@@ -65,12 +153,13 @@ public class Bar {
 		this.timeFrame = timeFrame;
 	}
 
-	public double getVma() {
-		return vma;
+	
+	public double getVwap() {
+		return vwap;
 	}
 
-	public void setVma(double vma) {
-		this.vma = vma;
+	public void setVwap(double vwap) {
+		this.vwap = vwap;
 	}
 
 	public String getKey()
@@ -151,51 +240,77 @@ public class Bar {
 		this.barWap = barWap;
 	}
 
-	public double getEma0() {
-		return ema0;
+	public double getEma10() {
+		return ema10;
 	}
 
-	public void setEma0(double ema0) {
-		this.ema0 = ema0;
+	public void setEma10(double ema10) {
+		this.ema10 = ema10;
 	}
 
-	public double getEma1() {
-		return ema1;
+	public double getEma20() {
+		return ema20;
 	}
 
-	public void setEma1(double ema1) {
-		this.ema1 = ema1;
+	public void setEma20(double ema20) {
+		this.ema20 = ema20;
 	}
 
-	public double getEma2() {
-		return ema2;
+	public double getEma9() {
+		return ema9;
 	}
 
-	public void setEma2(double ema2) {
-		this.ema2 = ema2;
+	public void setEma9(double ema9) {
+		this.ema9 = ema9;
 	}
 
-	@Override
-	public int hashCode() {
-		return 17 + this.tickerId.hashCode() + this.barTime.hashCode();
+	public double getEma21() {
+		return ema21;
 	}
 
-	@Override
-	public boolean equals(Object obj) {
-		
-		if(!(obj instanceof Bar)) return false;
+	public void setEma21(double ema21) {
+		this.ema21 = ema21;
+	}
 
-		return this.tickerId.equals(((Bar)obj).tickerId) && this.barTime.equals(((Bar)obj).barTime);
+	public double getSma10() {
+		return sma10;
+	}
+
+	public void setSma10(double sma10) {
+		this.sma10 = sma10;
+	}
+
+	public double getSma20() {
+		return sma20;
+	}
+
+	public void setSma20(double sma20) {
+		this.sma20 = sma20;
+	}
+
+	public double getSma9() {
+		return sma9;
+	}
+
+	public void setSma9(double sma9) {
+		this.sma9 = sma9;
+	}
+
+	public double getSma21() {
+		return sma21;
+	}
+
+	public void setSma21(double sma21) {
+		this.sma21 = sma21;
 	}
 
 	@Override
 	public String toString() {
 		return "Bar [barId=" + barId + ", tickerId=" + tickerId + ", createdOn=" + createdOn + ", barTime=" + barTime
 				+ ", barOpen=" + barOpen + ", barHigh=" + barHigh + ", barLow=" + barLow + ", barClose=" + barClose
-				+ ", barVolume=" + barVolume + ", barCount=" + barCount + ", barWap=" + barWap + ", timeframe="
-				+ timeFrame +", ema0=" + ema0 + ", ema1=" + ema1 + ", ema2=" + ema2
-				+ ", vma=" + vma + "]";
+				+ ", barVolume=" + barVolume + ", barCount=" + barCount + ", barWap=" + barWap + ", timeFrame="
+				+ timeFrame + ", ema10=" + ema10 + ", ema20=" + ema20 + ", ema9=" + ema9 + ", ema21=" + ema21
+				+ ", vwap=" + vwap + ", sma10=" + sma10 + ", sma20=" + sma20 + ", sma9=" + sma9 + ", sma21=" + sma21
+				+ "]";
 	}
-
-
 }

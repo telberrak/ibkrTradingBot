@@ -1,21 +1,37 @@
 package com.interactivebrokers.twstrading;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 
 import javax.persistence.EntityManagerFactory;
 import javax.sql.DataSource;
 
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.common.serialization.StringDeserializer;
+import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
+import org.springframework.kafka.annotation.EnableKafka;
+import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
+import org.springframework.kafka.core.ConsumerFactory;
+import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
+import org.springframework.kafka.core.DefaultKafkaProducerFactory;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.core.ProducerFactory;
+import org.springframework.kafka.support.serializer.JsonDeserializer;
+import org.springframework.kafka.support.serializer.JsonSerializer;
 import org.springframework.orm.jpa.JpaTransactionManager;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
 import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
+import com.interactivebrokers.twstrading.domain.Bar;
 import com.interactivebrokers.twstrading.managers.BarManager;
 import com.interactivebrokers.twstrading.managers.BarManagerImpl;
 import com.interactivebrokers.twstrading.managers.ContractManager;
@@ -26,6 +42,7 @@ import com.interactivebrokers.twstrading.managers.StrategySimulator;
 @Configuration
 @EnableJpaRepositories
 @EnableTransactionManagement
+@EnableKafka
 public class AppConfig {
 
 	@Value("${spring.datasource.driver-class-name}")
@@ -39,12 +56,15 @@ public class AppConfig {
 
 	@Value("${spring.datasource.password}")
 	private String password;
-	
+
 	@Value("${spring.jpa.database-platform}")
 	private String platform;
+
+	@Value("${spring.kafka.server}")
+	private String bootstrapServer;
 	
-	@Value("${bar.timeFrame}")
-	private String timeFrame;
+	@Value("${spring.kafka.realtime.group.id}")
+	private String groupId;
 
 //	 @Autowired
 //	 private KafkaProperties kafkaProperties;
@@ -69,17 +89,14 @@ public class AppConfig {
 	public BarManager bartManager() {
 		return new BarManagerImpl();
 	}
-	
-	
+
 	@Bean
-	public Processor processor()
-	{
+	public Processor processor() {
 		return new Processor(contractManager(), bartManager());
 	}
-	
+
 	@Bean
-	public StrategySimulator strategySimulator()
-	{
+	public StrategySimulator strategySimulator() {
 		return new StrategySimulator(contractManager(), bartManager());
 	}
 
@@ -89,9 +106,9 @@ public class AppConfig {
 		HibernateJpaVendorAdapter vendorAdapter = new HibernateJpaVendorAdapter();
 		LocalContainerEntityManagerFactoryBean factory = new LocalContainerEntityManagerFactoryBean();
 		factory.setJpaVendorAdapter(vendorAdapter);
-		factory.setPackagesToScan(new String[] { "com.interactivebrokers.twstrading","com.interactivebrokers.twstrading.domain",
-				"com.interactivebrokers.twstrading.simulators", "com.interactivebrokers.twstrading.managers",
-				"com.interactivebrokers.twstrading.repositories" });
+		factory.setPackagesToScan(new String[] { "com.interactivebrokers.twstrading",
+				"com.interactivebrokers.twstrading.domain", "com.interactivebrokers.twstrading.simulators",
+				"com.interactivebrokers.twstrading.managers", "com.interactivebrokers.twstrading.repositories" });
 		factory.setDataSource(dataSource());
 		factory.setJpaProperties(additionalProperties());
 		return factory;
@@ -105,33 +122,68 @@ public class AppConfig {
 		return txManager;
 
 	}
-	
-	Properties additionalProperties() {
-	    Properties properties = new Properties();
-	    properties.setProperty("spring.jpa.database-platform", platform);
-	    properties.setProperty("spring.jpa.show-sql","true");
-		   
-	    return properties;
+
+	/**
+	 * 
+	 * Kafka config
+	 */
+
+	/**
+	 * 
+	 * @return
+	 */
+	@Bean
+	public ConsumerFactory<String, Bar> consumerFactory() {
+		Map<String, Object> config = new HashMap<>();
+
+		config.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServer);
+		config.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
+		config.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+		config.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
+		return new DefaultKafkaConsumerFactory<>(config, new StringDeserializer(), new JsonDeserializer<>(Bar.class));
 	}
-//	
-//	@Bean
-//    public Map<String, Object> producerConfigs() {
-//        Map<String, Object> props =
-//                new HashMap<>(kafkaProperties.buildProducerProperties());
-//        props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
-//                StringSerializer.class);
-//        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
-//                JsonSerializer.class);
-//        return props;
-//    }
-//
-//    @Bean
-//    public ProducerFactory<String, Object> producerFactory() {
-//        return new DefaultKafkaProducerFactory<>(producerConfigs());
-//    }
-//
-//    @Bean
-//    public KafkaTemplate<String, Object> kafkaTemplate() {
-//        return new KafkaTemplate<>(producerFactory());
-//    }
+
+	/**
+	 * 
+	 * @return
+	 */
+	private Properties additionalProperties() {
+		Properties properties = new Properties();
+		properties.setProperty("spring.jpa.database-platform", platform);
+		properties.setProperty("spring.jpa.show-sql", "true");
+
+		return properties;
+	}
+
+	/**
+	 * 
+	 * @return
+	 */
+	@Bean
+	public ConcurrentKafkaListenerContainerFactory<String, Bar> kafkaListenerContainerFactory() {
+		ConcurrentKafkaListenerContainerFactory<String, Bar> factory = new ConcurrentKafkaListenerContainerFactory<String, Bar>();
+		factory.setConsumerFactory(consumerFactory());
+		return factory;
+	}
+	
+	
+	/**
+	 * 
+	 * @return
+	 */
+	@Bean
+	public ProducerFactory<String, Bar> producerFactory() {
+		Map<String, Object> config = new HashMap<>();
+
+		config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServer);
+		config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+		config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
+
+		return new DefaultKafkaProducerFactory<String, Bar>(config);
+	}
+
+	@Bean
+	public KafkaTemplate<String, Bar> kafkaTemplate() {
+		return new KafkaTemplate<String, Bar>(producerFactory());
+	}
 }

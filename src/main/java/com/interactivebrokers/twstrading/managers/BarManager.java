@@ -16,5 +16,7 @@ public interface BarManager {
 	
 	
 	public Bar findLastBar(Long tickerId, String barTime, String timeFrame);
+	
+	public List<Bar> getBarsByBarTime(Long tickerId, String barTime);
 
 }

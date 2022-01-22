@@ -3,7 +3,6 @@
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -11,9 +10,11 @@ import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import com.interactivebrokers.twstrading.domain.Bar;
 import com.interactivebrokers.twstrading.domain.Contract;
+import com.interactivebrokers.twstrading.kafka.producers.TickerBarProducer;
 
 public class StrategySimulator {
 
@@ -23,6 +24,9 @@ public class StrategySimulator {
 	private BarManager barManager;
 
 	private ContractManager contracManager;
+	
+	@Autowired
+	private TickerBarProducer tickerBarProducer;
 	
 	public StrategySimulator(ContractManager contracManager , BarManager barManager) {
 		this.contracManager = contracManager;
@@ -40,6 +44,32 @@ public class StrategySimulator {
 		if(contracts == null || contracts.isEmpty())
 			return;
 		
+		
+		Calendar cal = Calendar.getInstance();
+		cal.add(Calendar.DAY_OF_MONTH, -1);
+		
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
+	
+		
+		for (Contract contract : contracts) {
+			
+			
+			List<Bar> bars = barManager.getBarsByBarTime(contract.getTickerId(), sdf.format(cal.getTime()));
+			
+			for(Bar bar : bars)
+			{
+				
+				tickerBarProducer.send(bar, "1MIN");
+				
+				try {
+					Thread.sleep(100);
+				} catch (InterruptedException e) {
+					
+				}
+			}
+		}
+		
+		/*
 		Calendar cal = Calendar.getInstance();
 		cal.add(Calendar.DAY_OF_MONTH, -1);
 		
@@ -49,6 +79,7 @@ public class StrategySimulator {
 		
 		for (Contract contract : contracts) {
 			
+			
 			//Bar bar = barManager.findLastBar(contract.getTickerId(), sdf.format(cal.getTime()), "1D");
 			
 			//logger.info("Previous day bar : "+bar.toString());
@@ -56,6 +87,7 @@ public class StrategySimulator {
 			List<Bar> bars = barManager.findBarsByTickerAndDate(contract.getTickerId(), Calendar.getInstance().getTime());		
 			if(bars == null)
 				continue;
+			
 			contractBars.put(contract, bars);
 		}
 		
@@ -69,11 +101,14 @@ public class StrategySimulator {
 			
 			List<Bar> reducedBar = stream.collect(Collectors.toList());
 			
-			
+			for(Bar bar : bars)
+				tickerBarProducer.send(bar, "5S");			
 			
 			logger.info(reducedBar.toString());
 		}
 
+		*/
+		
 		
 		
 		

@@ -20,4 +20,7 @@ public interface BarRepository extends CrudRepository<Bar, Long> {
 	
 	@Query(value = "select b from bars b where b.tickerId =:tickerId and b.barTime =:barTime and b.timeFrame =:timeFrame")
 	Bar findLastBar(@Param("tickerId")Long tickerId, @Param("barTime") String barTime,  @Param("timeFrame") String timeFrame);
+	
+	@Query(value = "select b from bars b where b.tickerId =:tickerId and b.barTime like %:barTime% order by b.barTime")
+	List<Bar> findBarsByBarTime(@Param("tickerId") Long tickerId, @Param("barTime") String barTime);
 }

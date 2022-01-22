@@ -94,7 +94,7 @@ public class Processor {
 			logger.info("Cancelling 1min historical data ");
 			cancelHistoricalData(m_client, contracts);
 
-			
+			/*
 			logger.info("Requesting realtime data ");
 			reqRealTimeBars(m_client, contracts);
 			
@@ -102,7 +102,7 @@ public class Processor {
 			
 			logger.info("Cancelling realtime data ");
 			cancelRealTimeBars(m_client, contracts);
-			
+			*/
 		}
 	}
 
@@ -116,7 +116,7 @@ public class Processor {
 		for (Contract contract : contracts) {
 			logger.info("Subscribing to realtimebar for [ reqId : " + contract.conid() + "]" + contract.toString());
 
-			client.reqRealTimeBars(contract.conid(), contract, 5, "TRADES", false, null);
+			client.reqRealTimeBars(contract.conid(), contract, 5, "TRADES", true, null);
 
 		}
 	}
@@ -189,7 +189,7 @@ public class Processor {
 			client.cancelHeadTimestamp(ibcontract.conid());
 
 			client.reqHistoricalData(ibcontract.conid(), ibcontract, endDateTime, durationString,
-					barSizeString, "TRADES", 0, 1, false, null);
+					barSizeString, "TRADES", 1, 1, false, null);
 		}
 		return;
 	}
