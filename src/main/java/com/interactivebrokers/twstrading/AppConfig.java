@@ -32,10 +32,15 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 import com.interactivebrokers.twstrading.domain.Bar;
+import com.interactivebrokers.twstrading.domain.Order;
 import com.interactivebrokers.twstrading.managers.BarManager;
 import com.interactivebrokers.twstrading.managers.BarManagerImpl;
 import com.interactivebrokers.twstrading.managers.ContractManager;
 import com.interactivebrokers.twstrading.managers.ContractManagerImpl;
+import com.interactivebrokers.twstrading.managers.OrderManager;
+import com.interactivebrokers.twstrading.managers.OrderManagerImpl;
+import com.interactivebrokers.twstrading.managers.PositionManager;
+import com.interactivebrokers.twstrading.managers.PositionManagerImpl;
 import com.interactivebrokers.twstrading.managers.Processor;
 import com.interactivebrokers.twstrading.managers.StrategySimulator;
 
@@ -63,8 +68,11 @@ public class AppConfig {
 	@Value("${spring.kafka.server}")
 	private String bootstrapServer;
 	
-	@Value("${spring.kafka.realtime.group.id}")
-	private String groupId;
+	@Value("${spring.kafka.realtime.price.group.id}")
+	private String priceGroupId;
+	
+	@Value("${spring.kafka.realtime.order.group.id}")
+	private String orderGroupId;
 
 //	 @Autowired
 //	 private KafkaProperties kafkaProperties;
@@ -88,6 +96,16 @@ public class AppConfig {
 	@Bean
 	public BarManager bartManager() {
 		return new BarManagerImpl();
+	}
+	
+	@Bean
+	public OrderManager orderManager() {
+		return new OrderManagerImpl();
+	}
+	
+	@Bean
+	public PositionManager positionManager() {
+		return new PositionManagerImpl();
 	}
 
 	@Bean
@@ -123,25 +141,7 @@ public class AppConfig {
 
 	}
 
-	/**
-	 * 
-	 * Kafka config
-	 */
 
-	/**
-	 * 
-	 * @return
-	 */
-	@Bean
-	public ConsumerFactory<String, Bar> consumerFactory() {
-		Map<String, Object> config = new HashMap<>();
-
-		config.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServer);
-		config.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
-		config.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-		config.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
-		return new DefaultKafkaConsumerFactory<>(config, new StringDeserializer(), new JsonDeserializer<>(Bar.class));
-	}
 
 	/**
 	 * 
@@ -157,22 +157,41 @@ public class AppConfig {
 
 	/**
 	 * 
+	 * Kafka config
+	 */
+
+	/**
+	 * 
 	 * @return
 	 */
 	@Bean
-	public ConcurrentKafkaListenerContainerFactory<String, Bar> kafkaListenerContainerFactory() {
-		ConcurrentKafkaListenerContainerFactory<String, Bar> factory = new ConcurrentKafkaListenerContainerFactory<String, Bar>();
-		factory.setConsumerFactory(consumerFactory());
-		return factory;
+	public ConsumerFactory<String, Bar> barConsumerFactory() {
+		Map<String, Object> config = new HashMap<>();
+
+		config.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServer);
+		config.put(ConsumerConfig.GROUP_ID_CONFIG, priceGroupId);
+		config.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+		config.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
+		return new DefaultKafkaConsumerFactory<>(config, new StringDeserializer(), new JsonDeserializer<>(Bar.class));
 	}
-	
 	
 	/**
 	 * 
 	 * @return
 	 */
 	@Bean
-	public ProducerFactory<String, Bar> producerFactory() {
+	public ConcurrentKafkaListenerContainerFactory<String, Bar> kafkaBarListenerContainerFactory() {
+		ConcurrentKafkaListenerContainerFactory<String, Bar> factory = new ConcurrentKafkaListenerContainerFactory<String, Bar>();
+		factory.setConsumerFactory(barConsumerFactory());
+		return factory;
+	}
+	
+	/**
+	 * 
+	 * @return
+	 */
+	@Bean
+	public ProducerFactory<String, Bar> barProducerFactory() {
 		Map<String, Object> config = new HashMap<>();
 
 		config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServer);
@@ -181,9 +200,50 @@ public class AppConfig {
 
 		return new DefaultKafkaProducerFactory<String, Bar>(config);
 	}
-
+	
 	@Bean
-	public KafkaTemplate<String, Bar> kafkaTemplate() {
-		return new KafkaTemplate<String, Bar>(producerFactory());
+	public KafkaTemplate<String, Bar> barKafkaTemplate() {
+		return new KafkaTemplate<String, Bar>(barProducerFactory());
 	}
+	
+	
+	
+	@Bean
+	public ConsumerFactory<String, Order> orderConsumerFactory() {
+		Map<String, Object> config = new HashMap<>();
+
+		config.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServer);
+		config.put(ConsumerConfig.GROUP_ID_CONFIG, orderGroupId);
+		config.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+		config.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
+		return new DefaultKafkaConsumerFactory<>(config, new StringDeserializer(), new JsonDeserializer<>(Order.class));
+	}
+	
+
+	
+	@Bean
+	public ConcurrentKafkaListenerContainerFactory<String, Order> kafkaOrderListenerContainerFactory() {
+		ConcurrentKafkaListenerContainerFactory<String, Order> factory = new ConcurrentKafkaListenerContainerFactory<String, Order>();
+		factory.setConsumerFactory(orderConsumerFactory());
+		return factory;
+	}
+		
+	
+	@Bean
+	public ProducerFactory<String, Order> orderProducerFactory() {
+		Map<String, Object> config = new HashMap<>();
+
+		config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServer);
+		config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+		config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
+
+		return new DefaultKafkaProducerFactory<String, Order>(config);
+	}
+
+	
+	@Bean
+	public KafkaTemplate<String, Order> orderKafkaTemplate() {
+		return new KafkaTemplate<String, Order>(orderProducerFactory());
+	}
+	
 }

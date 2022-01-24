@@ -5,8 +5,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
 
 import com.ib.client.Contract;
@@ -16,7 +15,7 @@ import com.ib.client.EReaderSignal;
 
 public class Processor {
 
-	private static final Logger logger = LoggerFactory.getLogger(Processor.class);
+	private static final Logger logger = Logger.getLogger(Processor.class);
 
 	private ContractManager contractManager;
 
@@ -86,6 +85,8 @@ public class Processor {
 			
 			*/
 			
+			//contractDetails2(m_client);
+			
 			logger.info("Requesting 1min historical data ");
 			historicalData1min(m_client, contracts);
 			
@@ -142,9 +143,11 @@ public class Processor {
 	private void historicalData1min(EClientSocket client, List<Contract> contracts) throws InterruptedException {
 		Calendar cal = Calendar.getInstance();
 		SimpleDateFormat form = new SimpleDateFormat("yyyyMMdd HH:mm:ss");
+		
+		//cal.add(Calendar.DAY_OF_MONTH, -15);
 		String formatted = form.format(cal.getTime());
 
-		historicalDataRequests(client, formatted, "1 D", "1 min", contracts);
+		historicalDataRequests(client, formatted, "5 D", "1 min", contracts);
 	}
 
 	/**
@@ -219,6 +222,23 @@ public class Processor {
 		}
 	}
 
+	private void contractDetails2(EClientSocket client) throws InterruptedException {
+
+			Contract contract1 = new Contract();
+			contract1.symbol("SPY");
+			contract1.secType("OPT");
+			contract1.currency("USD");
+			contract1.exchange("SMART");
+			contract1.lastTradeDateOrContractMonth("20220124");
+			contract1.strike(448);
+			contract1.right("C");
+			contract1.multiplier("100");
+			contract1.primaryExch("");
+
+			client.reqContractDetails(85557, contract1);
+		
+	}
+	
 	private static void pnl(EClientSocket client) throws InterruptedException {
 		// ! [reqpnl]
 		client.reqPnL(17001, "U4253904", "");

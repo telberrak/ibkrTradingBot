@@ -3,30 +3,25 @@
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.List;
-import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import com.interactivebrokers.twstrading.domain.Bar;
 import com.interactivebrokers.twstrading.domain.Contract;
-import com.interactivebrokers.twstrading.kafka.producers.TickerBarProducer;
+import com.interactivebrokers.twstrading.kafka.producers.BarProducer;
 
 public class StrategySimulator {
 
 	
-	private static final Logger logger = LoggerFactory.getLogger(StrategySimulator.class);
+	private static final Logger logger = Logger.getLogger(StrategySimulator.class);
 	
 	private BarManager barManager;
 
 	private ContractManager contracManager;
 	
 	@Autowired
-	private TickerBarProducer tickerBarProducer;
+	private BarProducer barProducer;
 	
 	public StrategySimulator(ContractManager contracManager , BarManager barManager) {
 		this.contracManager = contracManager;
@@ -46,7 +41,7 @@ public class StrategySimulator {
 		
 		
 		Calendar cal = Calendar.getInstance();
-		cal.add(Calendar.DAY_OF_MONTH, -1);
+		cal.add(Calendar.DAY_OF_MONTH, -4);
 		
 		SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
 	
@@ -59,10 +54,10 @@ public class StrategySimulator {
 			for(Bar bar : bars)
 			{
 				
-				tickerBarProducer.send(bar, "1MIN");
+				barProducer.send(bar);
 				
 				try {
-					Thread.sleep(100);
+					Thread.sleep(10);
 				} catch (InterruptedException e) {
 					
 				}

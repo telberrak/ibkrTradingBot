@@ -11,6 +11,18 @@ public class Order {
 	public Order() {
 	
 	}
+	
+	
+	public Order(String orderAction, Integer quantity, String orderType, Double price, String timeInForce) {
+		super();
+		this.orderAction = orderAction;
+		this.quantity = quantity;
+		this.orderType = orderType;
+		this.price = price;
+		this.timeInForce = timeInForce;
+	}
+
+
 	@Id
 	@GeneratedValue(strategy=GenerationType.AUTO)
 	private Long orderId;

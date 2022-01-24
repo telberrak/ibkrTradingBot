@@ -1,6 +1,7 @@
 package com.interactivebrokers.twstrading;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -18,6 +19,10 @@ public class Main {
 	
 	@Autowired private StrategySimulator strategySimulator;
 	
+	@Value("${application.simulation}")
+	private String simulation;
+
+	
 	public static void main(String[] args) {
 		SpringApplication.run(Main.class, args);
 	}
@@ -26,9 +31,13 @@ public class Main {
 	public CommandLineRunner commandLineRunner(ApplicationContext ctx) {
 		return args -> {
 
-		 //processor.start();
-			
-		 strategySimulator.startSimulation();
+		 if(!Boolean.parseBoolean(simulation))
+		 {
+			 processor.start();
+		 }else		
+		 {
+			 strategySimulator.startSimulation();
+		 }
 
 		};
 	}

@@ -5,10 +5,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import com.ib.client.Bar;
@@ -41,7 +39,7 @@ import com.ib.client.TickAttribLast;
 @Component
 public class EWrapperImpl implements EWrapper {
 
-	private static final Logger logger = LoggerFactory.getLogger(EWrapperImpl.class);
+	private static final Logger logger = Logger.getLogger(EWrapperImpl.class);
 	
 	private 
 	@Autowired ContractManager contractManager;

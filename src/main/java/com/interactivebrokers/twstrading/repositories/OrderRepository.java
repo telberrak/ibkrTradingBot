@@ -8,5 +8,4 @@ import com.interactivebrokers.twstrading.domain.Order;
 
 public interface OrderRepository extends CrudRepository<Order, Long> {
 
-	List<Order> findByConId(Long conId);
 }
