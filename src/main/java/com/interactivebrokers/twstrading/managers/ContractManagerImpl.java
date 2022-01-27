@@ -69,4 +69,10 @@ public class ContractManagerImpl implements ContractManager {
 		
 		return contractRepository.save(contract);
 	}
+
+	@Override
+	public Contract getContractToTrade(Long tickerId) {
+		
+		return null;
+	}
 }

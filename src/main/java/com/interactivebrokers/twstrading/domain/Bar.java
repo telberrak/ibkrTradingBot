@@ -46,17 +46,17 @@ public class Bar {
 	private Integer barCount;
 	private Double barWap;
 	private String timeFrame;
+	private double ema10;
+	private double ema20;
+	private double vwap;
 	
 	@Transient
-	private double ema10;
-	@Transient
-	private double ema20;
+	private Bar previousBar;
+	
 	@Transient
 	private double ema9;
 	@Transient
 	private double ema21;
-	@Transient
-	private double vwap;
 	@Transient
 	private double sma10;
 	@Transient
@@ -66,7 +66,41 @@ public class Bar {
 	@Transient
 	private double sma21;
 	
+	@Transient
+	private double lookAheadEma10;
+	@Transient
+	private double lookAheadEma20;
+	
 
+	public double average()
+	{
+		return (barOpen + barLow+ barClose + barHigh)/4.0;
+	}
+	
+	public double pivot()
+	{
+		return (barHigh + barLow + barClose) / 3.0;
+	}
+	
+	public double r1()
+	{
+		return 2 * pivot() - barLow;
+	}
+	
+	public double s1()
+	{
+		return 2 * pivot() - barHigh;
+	}
+	
+	public double r2()
+	{
+		return pivot() + (barHigh - barLow);
+	}
+	
+	public double s2()
+	{
+		return pivot() + (barHigh - barLow);
+	}
 	
 	public double body()
 	{
@@ -144,7 +178,15 @@ public class Bar {
 		return (isBullish() && this.getBarOpen() < this.getEma20() && this.getBarClose() > this.getEma20())
 				||(isBearish() && this.getBarOpen() > this.getEma20() && this.getBarClose() < this.getEma20());
 	}
-	
+
+	public Bar getPreviousBar() {
+		return previousBar;
+	}
+
+	public void setPreviousBar(Bar previousBar) {
+		this.previousBar = previousBar;
+	}
+
 	public String getTimeFrame() {
 		return timeFrame;
 	}
@@ -256,10 +298,6 @@ public class Bar {
 		this.ema20 = ema20;
 	}
 
-	public double getEma9() {
-		return ema9;
-	}
-
 	public void setEma9(double ema9) {
 		this.ema9 = ema9;
 	}
@@ -304,13 +342,31 @@ public class Bar {
 		this.sma21 = sma21;
 	}
 
+	public double getLookAheadEma10() {
+		return lookAheadEma10;
+	}
+
+	public void setLookAheadEma10(double lookAheadEma10) {
+		this.lookAheadEma10 = lookAheadEma10;
+	}
+
+	public double getLookAheadEma20() {
+		return lookAheadEma20;
+	}
+
+	public void setLookAheadEma20(double lookAheadEma20) {
+		this.lookAheadEma20 = lookAheadEma20;
+	}
+
 	@Override
 	public String toString() {
 		return "Bar [barId=" + barId + ", tickerId=" + tickerId + ", createdOn=" + createdOn + ", barTime=" + barTime
 				+ ", barOpen=" + barOpen + ", barHigh=" + barHigh + ", barLow=" + barLow + ", barClose=" + barClose
 				+ ", barVolume=" + barVolume + ", barCount=" + barCount + ", barWap=" + barWap + ", timeFrame="
-				+ timeFrame + ", ema10=" + ema10 + ", ema20=" + ema20 + ", ema9=" + ema9 + ", ema21=" + ema21
-				+ ", vwap=" + vwap + ", sma10=" + sma10 + ", sma20=" + sma20 + ", sma9=" + sma9 + ", sma21=" + sma21
-				+ "]";
+				+ timeFrame + ", ema10=" + ema10 + ", ema20=" + ema20 + ", vwap=" + vwap + ", ema9=" + ema9 + ", ema21="
+				+ ema21 + ", sma10=" + sma10 + ", sma20=" + sma20 + ", sma9=" + sma9 + ", sma21=" + sma21
+				+ ", lookAheadEma10=" + lookAheadEma10 + ", lookAheadEma20=" + lookAheadEma20 + "]";
 	}
+
+	
 }

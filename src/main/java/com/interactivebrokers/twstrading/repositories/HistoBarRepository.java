@@ -1,3 +1,6 @@
+/**
+ * 
+ */
 package com.interactivebrokers.twstrading.repositories;
 
 import java.util.List;
@@ -11,10 +14,13 @@ import org.springframework.data.repository.query.Param;
 
 import com.interactivebrokers.twstrading.domain.Bar;
 
-public interface BarRepository extends CrudRepository<Bar, Long> {
+/**
+ * @author telberrak
+ *
+ */
+public interface HistoBarRepository  extends CrudRepository<Bar, Long> {
 
-	
-	List<Bar> findByTickerId(Long conId);
+List<Bar> findByTickerId(Long conId);
 	
 	@Query(value = "select b from bars b where b.tickerId =:tickerId and b.barTime =:barTime and b.timeFrame =:timeFrame")
 	Bar findLastBar(@Param("tickerId")Long tickerId, @Param("barTime") String barTime,  @Param("timeFrame") String timeFrame);

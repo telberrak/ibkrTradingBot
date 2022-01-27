@@ -4,19 +4,17 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
-import java.util.Optional;
 
 import org.apache.log4j.Logger;
-import org.junit.platform.engine.reporting.ReportEntry;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import com.interactivebrokers.twstrading.domain.Bar;
 import com.interactivebrokers.twstrading.kafka.producers.BarProducer;
-import com.interactivebrokers.twstrading.repositories.BarRepository;
+import com.interactivebrokers.twstrading.repositories.HistoBarRepository;
 
-public class BarManagerImpl implements BarManager {
+public class HistoBarManagerImpl implements HistoBarManager {
 
-	private static final Logger logger = Logger.getLogger(BarManagerImpl.class);
+	private static final Logger logger = Logger.getLogger(HistoBarManagerImpl.class);
 	
 	@Autowired
 	private BarProducer barProducer;
@@ -26,9 +24,9 @@ public class BarManagerImpl implements BarManager {
 	private static final SimpleDateFormat yyyyMMdd = new SimpleDateFormat("yyyyMMdd  HH:mm:ss");
 	
 	@Autowired 
-	private BarRepository barRepository;
+	private HistoBarRepository histoBarRepository;
 
-	public BarManagerImpl() {
+	public HistoBarManagerImpl() {
 		
 	}
 
@@ -37,14 +35,14 @@ public class BarManagerImpl implements BarManager {
 
 		Bar bar = new Bar(Calendar.getInstance().getTime(), Long.valueOf(tickerId) ,sdf.format(new Date(time*1000)), open, high, low, close, volume, count, wap, "5S");
 		logger.info("saving bar "+bar.toString());
-		barRepository.save(bar);
+		histoBarRepository.save(bar);
 		barProducer.send(bar);
 	}
 	
 
 	@Override
 	public void updateBar(Bar bar) {		
-		barRepository.updatBar(bar.getBarId(), bar.getEma10(), bar.getEma20(), bar.getVwap());
+		histoBarRepository.updatBar(bar.getBarId(), bar.getEma10(), bar.getEma20(), bar.getVwap());
 	}
 
 	@Override
@@ -52,7 +50,7 @@ public class BarManagerImpl implements BarManager {
 			int count, double wap) {
 			Bar bar = new Bar(Calendar.getInstance().getTime(), Long.valueOf(tickerId) ,time, open, high, low, close, volume, count, wap, "1MIN");
 			logger.info("saving bar "+bar.toString());
-			barRepository.save(bar);
+			histoBarRepository.save(bar);
 			barProducer.send(bar);
 			
 	}
@@ -60,22 +58,22 @@ public class BarManagerImpl implements BarManager {
 	@Override
 	public List<Bar> findBarsByTickerAndDate(Long tickerId, Date date) {
 		
-		return barRepository.findByTickerId(Long.valueOf(tickerId));
+		return histoBarRepository.findByTickerId(Long.valueOf(tickerId));
 	}
 
 	@Override
 	public Bar findLastBar(Long tickerId, String barTime, String timeFrame) {
 		
-		return barRepository.findLastBar(tickerId, barTime, timeFrame);
+		return histoBarRepository.findLastBar(tickerId, barTime, timeFrame);
 	}
 
 	@Override
 	public List<Bar> getBarsByBarTime(Long tickerId, String barTime) {
-		return barRepository.findBarsByBarTime(tickerId, barTime);
+		return histoBarRepository.findBarsByBarTime(tickerId, barTime);
 	}
 
 	@Override
 	public Bar findYesterdaytBar(Long tickerId, String barTime) {
-		return barRepository.findYesterdaytBar(tickerId, barTime);
+		return histoBarRepository.findYesterdaytBar(tickerId, barTime);
 	}
 }
