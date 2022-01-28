@@ -41,7 +41,8 @@ public class StrategySimulator {
 		
 		
 		Calendar cal = Calendar.getInstance();
-		cal.add(Calendar.DAY_OF_MONTH, -1);
+		
+		cal.add(Calendar.DAY_OF_MONTH, -4);
 		
 		SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
 	
@@ -54,6 +55,7 @@ public class StrategySimulator {
 			for(Bar bar : bars)
 			{
 				
+				bar.setRealTime(true);
 				barProducer.send(bar);
 				
 				try {

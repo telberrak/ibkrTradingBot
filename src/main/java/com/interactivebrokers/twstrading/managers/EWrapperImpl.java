@@ -86,7 +86,7 @@ public class EWrapperImpl implements EWrapper {
 			double wap, int count) {
 
 			logger.info(EWrapperMsgGenerator.realtimeBar(reqId, time, open, high, low, close, volume, wap, count));
-			barManager.saveBar(reqId, time, open, high, low, close, volume, count, wap);
+			barManager.saveBar(reqId, time, open, high, low, close, volume, count, wap, true);
 	}
 
 
@@ -94,7 +94,7 @@ public class EWrapperImpl implements EWrapper {
 	public void historicalData(int reqId, Bar bar) {
 		logger.info(EWrapperMsgGenerator.historicalData(reqId, bar.time(), bar.open(), bar.high(), bar.low(), bar.close(), bar.volume(), bar.count(), bar.wap()));
 		
-		barManager.saveHistoBar(reqId, bar.time(), bar.open(), bar.high(), bar.low(), bar.close(), bar.volume(), bar.count(), bar.wap());
+		barManager.saveHistoBar(reqId, bar.time(), bar.open(), bar.high(), bar.low(), bar.close(), bar.volume(), bar.count(), bar.wap(), false);
 	}
 
 	

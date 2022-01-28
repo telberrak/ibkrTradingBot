@@ -33,9 +33,10 @@ public class BarManagerImpl implements BarManager {
 	}
 
 	@Override
-	public void saveBar(int tickerId, long time, double open, double high, double low, double close, long volume, int count, double wap) {
+	public void saveBar(int tickerId, long time, double open, double high, double low, double close, long volume, int count, double wap, boolean realTime) {
 
 		Bar bar = new Bar(Calendar.getInstance().getTime(), Long.valueOf(tickerId) ,sdf.format(new Date(time*1000)), open, high, low, close, volume, count, wap, "5S");
+		bar.setRealTime(realTime);
 		logger.info("saving bar "+bar.toString());
 		barRepository.save(bar);
 		barProducer.send(bar);
@@ -49,8 +50,9 @@ public class BarManagerImpl implements BarManager {
 
 	@Override
 	public void saveHistoBar(int tickerId, String time, double open, double high, double low, double close, long volume,
-			int count, double wap) {
+			int count, double wap, boolean realTime) {
 			Bar bar = new Bar(Calendar.getInstance().getTime(), Long.valueOf(tickerId) ,time, open, high, low, close, volume, count, wap, "1MIN");
+			bar.setRealTime(realTime);
 			logger.info("saving bar "+bar.toString());
 			barRepository.save(bar);
 			barProducer.send(bar);

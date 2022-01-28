@@ -106,11 +106,11 @@ public class Processor {
 			logger.info("Requesting realtime data "); reqRealTimeBars(m_client,
 					contracts);
 		  
-			Thread.sleep(300000*12*2);
+			Thread.sleep(7*60*60*1000);
 		  
 			logger.info("Cancelling realtime data "); cancelRealTimeBars(m_client,
 					contracts);
-			 
+			
 		}
 	}
 

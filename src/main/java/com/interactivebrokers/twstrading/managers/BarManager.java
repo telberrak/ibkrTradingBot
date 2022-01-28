@@ -10,9 +10,9 @@ import com.interactivebrokers.twstrading.domain.Bar;
 @Component
 public interface BarManager {
 	
-	public void saveBar(int reqId, long time, double open, double high, double low, double close, long volume, int count, double wap);
+	public void saveBar(int reqId, long time, double open, double high, double low, double close, long volume, int count, double wap, boolean realTime);
 	public void updateBar(Bar bar);
-	public void saveHistoBar(int reqId, String time, double open, double high, double low, double close, long volume, int count, double wap);
+	public void saveHistoBar(int reqId, String time, double open, double high, double low, double close, long volume, int count, double wap, boolean realTime);
 	public List<Bar> findBarsByTickerAndDate(Long tickerId, Date date);
 	
 	

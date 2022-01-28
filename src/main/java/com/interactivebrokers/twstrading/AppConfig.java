@@ -43,6 +43,7 @@ import com.interactivebrokers.twstrading.managers.PositionManager;
 import com.interactivebrokers.twstrading.managers.PositionManagerImpl;
 import com.interactivebrokers.twstrading.managers.Processor;
 import com.interactivebrokers.twstrading.managers.StrategySimulator;
+import com.interactivebrokers.twstrading.signals.TradingSignal;
 
 @Configuration
 @EnableJpaRepositories
@@ -93,6 +94,11 @@ public class AppConfig {
 		return new ContractManagerImpl();
 	}
 
+	
+//	@Bean
+//	public TradingSignal tradingSignal() {
+//		return new TradingSignal();
+//	}
 	@Bean
 	public BarManager bartManager() {
 		return new BarManagerImpl();

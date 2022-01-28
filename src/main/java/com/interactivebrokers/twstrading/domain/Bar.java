@@ -51,6 +51,8 @@ public class Bar {
 	private double vwap;
 	
 	@Transient
+	private boolean realTime;
+	@Transient
 	private Bar previousBar;
 	
 	@Transient
@@ -177,6 +179,14 @@ public class Bar {
 	{
 		return (isBullish() && this.getBarOpen() < this.getEma20() && this.getBarClose() > this.getEma20())
 				||(isBearish() && this.getBarOpen() > this.getEma20() && this.getBarClose() < this.getEma20());
+	}
+
+	public boolean isRealTime() {
+		return realTime;
+	}
+
+	public void setRealTime(boolean realTime) {
+		this.realTime = realTime;
 	}
 
 	public Bar getPreviousBar() {
