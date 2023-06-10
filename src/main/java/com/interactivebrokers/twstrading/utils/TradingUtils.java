@@ -18,6 +18,20 @@ public class TradingUtils {
 
 	/**
 	 * 
+	 * @param previousBar
+	 * @param currentBar
+	 * @param window
+	 * @return
+	 */
+	public static double rsi(LinkedList<Bar> bars, int window)
+	{		
+		double avgGain = bars.stream().map(Bar::change).filter(b -> b > 0.0).reduce(0.0,TradingUtils::add)/window;
+		double avgLoss = bars.stream().map(Bar::change).filter(b -> b < 0.0).reduce(0.0,TradingUtils::add)/window;
+		
+		return 100 * (1 - 1./(1 + Math.abs(avgGain/avgLoss))) ;
+	}
+	/**
+	 * 
 	 * @param bars
 	 * @param window
 	 * @return
@@ -43,4 +57,5 @@ public class TradingUtils {
 	{
 		return a + b;
 	}
+	
 }

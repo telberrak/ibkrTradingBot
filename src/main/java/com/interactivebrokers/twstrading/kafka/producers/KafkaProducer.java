@@ -4,12 +4,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.core.KafkaTemplate;
 
 import com.interactivebrokers.twstrading.domain.Bar;
+import com.interactivebrokers.twstrading.domain.HistoBar;
 import com.interactivebrokers.twstrading.domain.Order;
 
 public class KafkaProducer{
 
 	@Autowired
 	protected KafkaTemplate<String, Bar> barKafkaTemplate;
+	
+	@Autowired
+	protected KafkaTemplate<String, HistoBar> histoBarKafkaTemplate;
 
 	@Autowired
 	protected KafkaTemplate<String, Order> orderKafkaTemplate;
@@ -20,6 +24,11 @@ public class KafkaProducer{
 		barKafkaTemplate.send   (topic, bar);
 	}
 	
+	
+	protected void send(String topic, HistoBar bar)
+	{
+		histoBarKafkaTemplate.send(topic, bar);
+	}
 	protected void send(String topic, Order order)
 	{
 		orderKafkaTemplate.send(topic, order);

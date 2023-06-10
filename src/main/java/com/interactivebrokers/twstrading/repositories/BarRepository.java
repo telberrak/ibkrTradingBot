@@ -10,6 +10,7 @@ import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.query.Param;
 
 import com.interactivebrokers.twstrading.domain.Bar;
+import com.interactivebrokers.twstrading.domain.HistoBar;
 
 public interface BarRepository extends CrudRepository<Bar, Long> {
 
@@ -27,6 +28,7 @@ public interface BarRepository extends CrudRepository<Bar, Long> {
 	
 	@Transactional
 	@Modifying
-	@Query(value = "update bars b set b.ema10 = :ema10, b.ema20 = :ema20, b.vwap = :vwap where b.barId = :barId")
-	void updatBar(@Param("barId") Long barId, @Param("ema10") double ema10, @Param("ema20") double ema20, @Param("vwap") double vwap);
+	@Query(value = "update bars b set b.ema10 = :ema10, b.ema20 = :ema20, b.vwap = :vwap, b.rsi = :rsi where b.barId = :barId")
+	void updatBar(@Param("barId") Long barId, @Param("ema10") double ema10, @Param("ema20") double ema20, @Param("vwap") double vwap, @Param("rsi") double rsi);
+	
 }

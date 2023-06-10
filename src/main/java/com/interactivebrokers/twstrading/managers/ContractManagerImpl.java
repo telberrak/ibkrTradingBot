@@ -50,12 +50,12 @@ public class ContractManagerImpl implements ContractManager {
 			contract = new Contract();
 		}
 				
-		contract.setConId((long)reqId);
+		//contract.setConId((long)reqId);
 		contract.setTickerId(Long.valueOf(ibContract.conid()));
 		contract.setSymbol(ibContract.symbol());
 		contract.setSecType(ibContract.secType().name());
 		contract.setConExchange(ibContract.exchange());
-		contract.setPrimaryExchange(ibContract.primaryExch());
+		contract.setPrimaryExchange(ibContract.primaryExch() == null ? "" : ibContract.primaryExch());
 		contract.setCurrency(ibContract.currency());
 		contract.setStrike(ibContract.strike());
 		contract.setLastTradedateOrContractMonth(ibContract.lastTradeDateOrContractMonth());
@@ -72,7 +72,9 @@ public class ContractManagerImpl implements ContractManager {
 
 	@Override
 	public Contract getContractToTrade(Long tickerId) {
+
+		Contract contract = contractRepository.findContractByTickerId(tickerId);
 		
-		return null;
+		return contract;
 	}
 }

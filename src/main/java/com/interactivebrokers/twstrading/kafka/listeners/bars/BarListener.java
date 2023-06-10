@@ -12,8 +12,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import com.interactivebrokers.twstrading.domain.Bar;
+import com.interactivebrokers.twstrading.domain.HistoBar;
 import com.interactivebrokers.twstrading.domain.Order;
 import com.interactivebrokers.twstrading.domain.TradingAction;
 import com.interactivebrokers.twstrading.kafka.producers.OrderProducer;
@@ -26,7 +28,7 @@ public class BarListener {
 	
 	private static final Logger logger = Logger.getLogger(BarListener.class);
 	
-	private static int SESSION_TIME_MULTIPLIER = 1; //1min = 12 x 5s
+	private static int SESSION_TIME_MULTIPLIER =1; //1min = 12 x 5s
 	
 	private static final int TOTAL_TRADING_SESSION_MINUTES = 390 * SESSION_TIME_MULTIPLIER;
 	
@@ -38,8 +40,8 @@ public class BarListener {
 	@Autowired
 	private TradingSignal tradingSignal;
 
-	//@Value("${spring.kafka.realtime.listener.price.tickerid.1}")
-	//private String tickerIdStr;
+	@Value("${spring.kafka.realtime.listener.price.tickerid}")
+	private String tickerIdStr;
 	
 	@Value("${application.bartime.steps}")
 	private List<String> timeFrameSteps;
@@ -57,6 +59,11 @@ public class BarListener {
 	private double avgEMADistance;
 	private double cumEMADistance;
 	
+	private double sumGain;
+	private double sumLoss;
+	
+	
+	private int rsi_window = 10;
 	private int window10 = 10 * SESSION_TIME_MULTIPLIER;
 	private int window20 = 20 * SESSION_TIME_MULTIPLIER;
 	private int window30 = 30 * SESSION_TIME_MULTIPLIER;
@@ -79,6 +86,8 @@ public class BarListener {
 	private LinkedList<Bar> bars20 = new LinkedList<Bar>();
 	private LinkedList<Bar> bars30 = new LinkedList<Bar>();
 	
+	private LinkedList<Bar> rsi_bars = new LinkedList<Bar>();
+	
 	//used for analysis of price action. find candlestick patterns
 	private LinkedList<Bar> processed_bars = new LinkedList<Bar>();
 	
@@ -98,6 +107,8 @@ public class BarListener {
 	
 	double acceptablePercentLoss = 0.2;
 	
+	private Long tickerId;
+	
 	
 	private double tradingSessionHigh = Double.MIN_VALUE; //we start at the min value and will be set to currentBar.getBarHigh
 	private double tradingSessionLow = Double.MAX_VALUE;  //we start at the max value and will be set to currentBar.getBarLow
@@ -108,7 +119,7 @@ public class BarListener {
 
 	@PostConstruct
 	void init() {
-		//tickerId = Long.parseLong(tickerIdStr);
+		tickerId = StringUtils.isEmpty(tickerIdStr) ? -1 : Long.parseLong(tickerIdStr);
 	}
 
 	/**
@@ -118,6 +129,10 @@ public class BarListener {
 	 */
 	private boolean isToDiscard(Bar bar)
 	{
+		if(!tickerId.equals(bar.getTickerId()))
+		{
+			return true;
+		}
 		if(timeFrameSteps == null || timeFrameSteps.isEmpty())
 		{
 			return false;
@@ -140,12 +155,22 @@ public class BarListener {
 		
 		all_bars.add(bar);
 		
-		if(isToDiscard(bar))
-		{	
-			return;
-		}
-		processData(bar);
+//		if(isToDiscard(bar))
+//		{	
+//			return;
+//		}
+		
+		logger.info(bar);
+		//processData(bar);
 	}
+	
+	@KafkaListener(topics = "${spring.kafka.histo.topic.price}", groupId = "${spring.kafka.histo.price.group.id}", containerFactory = "kafkaHistoBarListenerContainerFactory")
+	public void consume(HistoBar bar) {
+		
+		logger.info("Consuming histo bar : "+ bar.toString());
+	
+	}
+
 
 	
 	/**
@@ -154,6 +179,8 @@ public class BarListener {
 	 */
 	public void processData(Bar currentBar) {
 		
+		
+		long current = System.currentTimeMillis();
 		
 		//WE NEED TO CHECK THE BAR TIME CORRESPOND TO SYSTEM TIME IN CASE OF A RESTART
 		//WHEN WE RESTART WE WILL GETR ALL HISTO DATA BEFORE REALTIEM DATA AND WE SHOULD NOT
@@ -279,12 +306,14 @@ public class BarListener {
 			}			
 		}
 		
+		
+		
 		barManager.updateBar(currentBar);
 		
 		previousBar = currentBar;
 				
 		logger.info("End processing bar : "+currentBar.toString());
-		
+		logger.info("Processing ends in : "+ (System.currentTimeMillis() - current) + " milliseconds");
 		counter++;
 	}
 	
@@ -344,21 +373,32 @@ public class BarListener {
 		cumBarBody =+ currentBar.body();
 		avgBarBody = cumBarBody / counter;	
 
-
 		cumEMADistance += Math.abs(currentBar.getEma10() - currentBar.getEma20());
 		avgEMADistance = (cumEMADistance / counter);
 
-		currentBar.setVwap(cumPV / cumVolume);
+		currentBar.setVwap(cumVolume != 0.0 ? (cumPV / cumVolume) : 0);
 		
+		currentBar.setAvgGain(rsi_window);
+		currentBar.setAvgLoss(rsi_window);
+		
+		
+		rsi_bars.add(currentBar);
+		
+		if(rsi_bars.size() == (rsi_window + 1)) // we don't need the first one
+		{
+			rsi_bars.pop();
+			currentBar.setRsi(TradingUtils.rsi(rsi_bars, rsi_window));
+		}
+
 		bars10.add(currentBar);
 		bars20.add(currentBar);
 		bars30.add(currentBar);
 		
 		if (bars10.size() == window10) {
 			currentBar.setSma10(TradingUtils.sma(bars10, window10));
-			currentBar.setEma10(TradingUtils.ema((currentBar.getPreviousBar() !=null && currentBar.getPreviousBar().getEma10() == 0.0) ? currentBar.getSma10() : currentBar.getPreviousBar().getEma10(), currentBar.getBarClose(), window10));
+			currentBar.setEma10(TradingUtils.ema((currentBar.getPreviousBar() !=null && currentBar.getPreviousBar().getEma10() == 0.0) ? currentBar.getSma10() : currentBar.getPreviousBar().getEma10(), currentBar.getBarClose(), window10));			
+			
 			bars10.pop();
-		
 		}
 		
 		if (bars20.size() == window20) {
@@ -377,6 +417,8 @@ public class BarListener {
 		
 		//add the bar to all bars list for analysis
 		processed_bars.add(currentBar);
+		
+		
 	}
 	
 	

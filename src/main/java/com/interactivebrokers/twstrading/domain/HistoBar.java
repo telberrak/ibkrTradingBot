@@ -9,10 +9,10 @@ import javax.persistence.Id;
 import javax.persistence.Transient;
 
 
-@Entity(name = "bars")
-public class Bar {
+@Entity(name = "histo_bars")
+public class HistoBar {
 
-	public Bar() {
+	public HistoBar() {
 		
 	}
 
@@ -30,7 +30,7 @@ public class Bar {
 	 * @param barWap
 	 * @param timeFrame
 	 */
-	public Bar(Date createdOn, Long tickerId, String barTime, Double barOpen, Double barHigh, Double barLow,
+	public HistoBar(Date createdOn, Long tickerId, String barTime, Double barOpen, Double barHigh, Double barLow,
 			Double barClose, Long barVolume, Integer barCount, Double barWap, String timeFrame) {
 		super();
 		this.createdOn = createdOn;

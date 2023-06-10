@@ -1,14 +1,16 @@
  package com.interactivebrokers.twstrading.managers;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 
-import com.interactivebrokers.twstrading.domain.Bar;
 import com.interactivebrokers.twstrading.domain.Contract;
+import com.interactivebrokers.twstrading.domain.HistoBar;
 import com.interactivebrokers.twstrading.kafka.producers.BarProducer;
 
 public class StrategySimulator {
@@ -18,13 +20,16 @@ public class StrategySimulator {
 	
 	private BarManager barManager;
 
-	private ContractManager contracManager;
+	private ContractManager contractManager;
 	
 	@Autowired
 	private BarProducer barProducer;
 	
-	public StrategySimulator(ContractManager contracManager , BarManager barManager) {
-		this.contracManager = contracManager;
+	@Value("${spring.kafka.realtime.listener.price.tickerid}")
+	private String tickerIdStr;
+	
+	public StrategySimulator(ContractManager contractManager , BarManager barManager) {
+		this.contractManager = contractManager;
 		this.barManager = barManager;
 	}
 	
@@ -34,80 +39,55 @@ public class StrategySimulator {
 	public void startSimulation()
 	{
 		
-		List<Contract> contracts = contracManager.getActiveContracts();
+		List<Contract> contracts = new ArrayList<Contract>();
+		
+		if(tickerIdStr != null && !tickerIdStr.trim().equalsIgnoreCase(""))
+		{
+			com.interactivebrokers.twstrading.domain.Contract contract = contractManager.getContractToTrade(Long.valueOf(tickerIdStr));
+		
+			if(contract != null)
+			{
+				contracts.add(contract);
+			}
+		}
+		
+		if(contracts.isEmpty())
+		{
+			contracts = contractManager.getActiveContracts();
+		}
 		
 		if(contracts == null || contracts.isEmpty())
 			return;
 		
+		//int[] offsets = {-3,-4,-7,-8,-9,-10,-11,-14,-15,-16,-17,-18, -19,-20,-21,-22,-23,-24,-25,-26,-27,-28,-29,-30,-31,-32,-33};
 		
-		Calendar cal = Calendar.getInstance();
+		int[] offsets = {-1};
 		
-		cal.add(Calendar.DAY_OF_MONTH, -4);
-		
-		SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
-	
-		
-		for (Contract contract : contracts) {
+		for (int offset : offsets) 
+		{
+			Calendar cal = Calendar.getInstance();
 			
+			cal.add(Calendar.DAY_OF_MONTH, offset);
 			
-			List<Bar> bars = barManager.getBarsByBarTime(contract.getTickerId(), sdf.format(cal.getTime()));
+			SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
 			
-			for(Bar bar : bars)
-			{
+			for (Contract contract : contracts) {
 				
-				bar.setRealTime(true);
-				barProducer.send(bar);
 				
-				try {
-					Thread.sleep(5);
-				} catch (InterruptedException e) {
+				List<HistoBar> bars = barManager.getHistoBarsByBarTime(contract.getTickerId(), sdf.format(cal.getTime()));
+				
+				for(HistoBar bar : bars)
+				{					
+					bar.setRealTime(true);
+					barProducer.send(bar);
 					
+					try {
+						Thread.sleep(5);
+					} catch (InterruptedException e) {
+						
+					}
 				}
 			}
 		}
-	
-		/*
-		Calendar cal = Calendar.getInstance();
-		cal.add(Calendar.DAY_OF_MONTH, -1);
-		
-		SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
-	
-		ConcurrentHashMap<Contract,List<Bar>> contractBars = new ConcurrentHashMap<Contract,List<Bar>>();
-		
-		for (Contract contract : contracts) {
-			
-			
-			//Bar bar = barManager.findLastBar(contract.getTickerId(), sdf.format(cal.getTime()), "1D");
-			
-			//logger.info("Previous day bar : "+bar.toString());
-			
-			List<Bar> bars = barManager.findBarsByTickerAndDate(contract.getTickerId(), Calendar.getInstance().getTime());		
-			if(bars == null)
-				continue;
-			
-			contractBars.put(contract, bars);
-		}
-		
-		for (Entry<Contract, List<Bar>> entry : contractBars.entrySet()) {
-			
-			logger.info("Simulating contract "+entry.getKey().toString() );
-			
-			List<Bar> bars = entry.getValue();
-			
-			Stream<Bar> stream = bars.stream().filter(b -> b.getBarTime().endsWith("00"));
-			
-			List<Bar> reducedBar = stream.collect(Collectors.toList());
-			
-			for(Bar bar : bars)
-				tickerBarProducer.send(bar, "5S");			
-			
-			logger.info(reducedBar.toString());
-		}
-
-		*/
-		
-		
-		
-		
 	}
 }

@@ -95,6 +95,8 @@ public class EWrapperImpl implements EWrapper {
 		logger.info(EWrapperMsgGenerator.historicalData(reqId, bar.time(), bar.open(), bar.high(), bar.low(), bar.close(), bar.volume(), bar.count(), bar.wap()));
 		
 		barManager.saveHistoBar(reqId, bar.time(), bar.open(), bar.high(), bar.low(), bar.close(), bar.volume(), bar.count(), bar.wap(), false);
+		
+		
 	}
 
 	

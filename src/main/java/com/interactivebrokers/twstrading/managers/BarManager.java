@@ -6,6 +6,7 @@ import java.util.List;
 import org.springframework.stereotype.Component;
 
 import com.interactivebrokers.twstrading.domain.Bar;
+import com.interactivebrokers.twstrading.domain.HistoBar;
 
 @Component
 public interface BarManager {
@@ -19,5 +20,8 @@ public interface BarManager {
 	public Bar findLastBar(Long tickerId, String barTime, String timeFrame);
 	public Bar findYesterdaytBar(Long tickerId, String barTime);
 	public List<Bar> getBarsByBarTime(Long tickerId, String barTime);
+	public List<HistoBar> getHistoBarsByBarTime(Long tickerId, String barTime);
+	
+	public List<HistoBar> getHistoBarsByTickerAndTimeframe(Long tickerId, String timeframe);
 
 }

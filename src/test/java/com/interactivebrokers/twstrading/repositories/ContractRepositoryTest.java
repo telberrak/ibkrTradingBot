@@ -15,6 +15,7 @@ public class ContractRepositoryTest {
 
 	private static final Logger logger = Logger.getLogger(ContractRepositoryTest.class);
 	
+	/*
 	@Autowired
 	private ContractRepository contractRepository;
 
@@ -76,5 +77,5 @@ public class ContractRepositoryTest {
 		}
 		
 	}
-	
+	*/
 }

@@ -3,6 +3,7 @@ package com.interactivebrokers.twstrading.domain;
 import java.util.Date;
 import java.util.Objects;
 
+import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
@@ -16,7 +17,7 @@ public class Contract {
 	}
 
 	@Id
-	@GeneratedValue(strategy=GenerationType.AUTO)
+	@GeneratedValue(strategy=GenerationType.IDENTITY)
 	private Long conId;
 	private Long tickerId;
 	private String symbol;
@@ -32,6 +33,8 @@ public class Contract {
 	private String secIdType;
 	private Date updateDate;
 	private boolean isActive;
+	@Column(name="histo_received")
+	private boolean histoReceived;
 	
 	public Long getConId() {
 		return conId;
@@ -131,6 +134,14 @@ public class Contract {
 	public int hashCode() {
 		return Objects.hash(tickerId);
 	}
+	
+	
+	public boolean isHistoReceived() {
+		return histoReceived;
+	}
+	public void setHistoReceived(boolean histoReceived) {
+		this.histoReceived = histoReceived;
+	}
 	@Override
 	public boolean equals(Object obj) {
 		if (this == obj)
@@ -148,7 +159,9 @@ public class Contract {
 				+ ", conExchange=" + conExchange + ", primaryExchange=" + primaryExchange + ", currency=" + currency
 				+ ", strike=" + strike + ", lastTradedateOrContractMonth=" + lastTradedateOrContractMonth
 				+ ", optRight=" + optRight + ", multiplier=" + multiplier + ", secId=" + secId + ", secIdType="
-				+ secIdType + ", updateDate=" + updateDate + ", isActive=" + isActive + "]";
+				+ secIdType + ", updateDate=" + updateDate + ", isActive=" + isActive + ", histoReceived="
+				+ histoReceived + "]";
 	}
+	
 	
 }

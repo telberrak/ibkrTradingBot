@@ -2,7 +2,9 @@ package com.interactivebrokers.twstrading.repositories;
 
 import java.util.List;
 
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,4 +20,8 @@ public interface ContractRepository extends CrudRepository<Contract, Long> {
 	@Override
 	@Transactional(timeout = 10)
 	List<Contract> findAll();
+	
+	
+	@Query(value = "select c from contracts c where c.tickerId =:tickerId")
+	Contract findContractByTickerId(@Param("tickerId") Long tickerId);
 }

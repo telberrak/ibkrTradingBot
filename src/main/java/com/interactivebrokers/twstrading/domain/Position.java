@@ -12,7 +12,7 @@ public class Position {
 	}
 	
 	@Id
-	@GeneratedValue(strategy=GenerationType.AUTO)
+	@GeneratedValue(strategy=GenerationType.IDENTITY)
 	private Long posId;
 	private Long conId;
 	private String accountId;

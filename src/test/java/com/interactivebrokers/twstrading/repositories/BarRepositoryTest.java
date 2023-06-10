@@ -1,14 +1,14 @@
 package com.interactivebrokers.twstrading.repositories;
 
-import java.util.Calendar;
+import java.util.List;
 
 import org.jboss.logging.Logger;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
-import com.interactivebrokers.twstrading.domain.Bar;
-import com.interactivebrokers.twstrading.domain.Contract;
+import com.interactivebrokers.twstrading.domain.HistoBar;
+import com.interactivebrokers.twstrading.managers.BarManager;
 
 @SpringBootTest
 public class BarRepositoryTest {
@@ -16,10 +16,22 @@ public class BarRepositoryTest {
 	private static final Logger logger = Logger.getLogger(BarRepositoryTest.class);
 	
 	@Autowired
-	private BarRepository barRepository;
+	private BarManager barManager;
 	
-	@Autowired
-	private ContractRepository contractRepository;
+	
+	
+	
+	
+	@Test
+	public void testRetrieveHistoPrices()
+	{
+		List<HistoBar> prices = barManager.getHistoBarsByTickerAndTimeframe(265598L, "D");
+		
+		for(HistoBar price : prices)
+		{
+			logger.info(price);
+		}
+	}
 	
 /*
 	@Test

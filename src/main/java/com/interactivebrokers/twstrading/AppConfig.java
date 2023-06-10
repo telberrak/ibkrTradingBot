@@ -32,6 +32,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 import com.interactivebrokers.twstrading.domain.Bar;
+import com.interactivebrokers.twstrading.domain.HistoBar;
 import com.interactivebrokers.twstrading.domain.Order;
 import com.interactivebrokers.twstrading.managers.BarManager;
 import com.interactivebrokers.twstrading.managers.BarManagerImpl;
@@ -43,7 +44,6 @@ import com.interactivebrokers.twstrading.managers.PositionManager;
 import com.interactivebrokers.twstrading.managers.PositionManagerImpl;
 import com.interactivebrokers.twstrading.managers.Processor;
 import com.interactivebrokers.twstrading.managers.StrategySimulator;
-import com.interactivebrokers.twstrading.signals.TradingSignal;
 
 @Configuration
 @EnableJpaRepositories
@@ -100,7 +100,7 @@ public class AppConfig {
 //		return new TradingSignal();
 //	}
 	@Bean
-	public BarManager bartManager() {
+	public BarManager barManager() {
 		return new BarManagerImpl();
 	}
 	
@@ -116,12 +116,12 @@ public class AppConfig {
 
 	@Bean
 	public Processor processor() {
-		return new Processor(contractManager(), bartManager());
+		return new Processor(contractManager(), barManager());
 	}
 
 	@Bean
 	public StrategySimulator strategySimulator() {
-		return new StrategySimulator(contractManager(), bartManager());
+		return new StrategySimulator(contractManager(), barManager());
 	}
 
 	@Bean
@@ -213,6 +213,47 @@ public class AppConfig {
 	}
 	
 	
+	@Bean
+	public ConsumerFactory<String, HistoBar> histoBarConsumerFactory() {
+		Map<String, Object> config = new HashMap<>();
+
+		config.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServer);
+		config.put(ConsumerConfig.GROUP_ID_CONFIG, priceGroupId);
+		config.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+		config.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
+		return new DefaultKafkaConsumerFactory<>(config, new StringDeserializer(), new JsonDeserializer<>(HistoBar.class));
+	}
+	
+	/**
+	 * 
+	 * @return
+	 */
+	@Bean
+	public ConcurrentKafkaListenerContainerFactory<String, HistoBar> kafkaHistoBarListenerContainerFactory() {
+		ConcurrentKafkaListenerContainerFactory<String, HistoBar> factory = new ConcurrentKafkaListenerContainerFactory<String, HistoBar>();
+		factory.setConsumerFactory(histoBarConsumerFactory());
+		return factory;
+	}
+	
+	/**
+	 * 
+	 * @return
+	 */
+	@Bean
+	public ProducerFactory<String, HistoBar> histoBarProducerFactory() {
+		Map<String, Object> config = new HashMap<>();
+
+		config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServer);
+		config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+		config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
+
+		return new DefaultKafkaProducerFactory<String, HistoBar>(config);
+	}
+	
+	@Bean
+	public KafkaTemplate<String, HistoBar> histoBarKafkaTemplate() {
+		return new KafkaTemplate<String, HistoBar>(histoBarProducerFactory());
+	}
 	
 	@Bean
 	public ConsumerFactory<String, Order> orderConsumerFactory() {

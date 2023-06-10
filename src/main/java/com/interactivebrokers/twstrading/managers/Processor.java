@@ -27,6 +27,9 @@ public class Processor {
 	@Value("${connection.port}")
 	private int port;
 
+	@Value("${spring.kafka.realtime.listener.price.tickerid}")
+	private String tickerIdStr;
+
 	public Processor(ContractManager contractManager, BarManager barManager) {
 		this.contractManager = contractManager;
 		this.barManager = barManager;
@@ -45,7 +48,7 @@ public class Processor {
 		final EClientSocket m_client = wrapper.getClient();
 		final EReaderSignal m_signal = wrapper.getSignal();
 		// ! [connect]
-		m_client.eConnect("127.0.0.1", 7496, 2);
+		m_client.eConnect(host, port, 2);
 		// ! [connect]
 		// ! [ereader]
 		final EReader reader = new EReader(m_client, m_signal);
@@ -72,45 +75,56 @@ public class Processor {
 			logger.info("No contract found");
 		else {
 
-			//contractDetails(m_client,contracts);
-
-			//logger.info("Requesting 5min historical data ");
-			// reqRealTimeBars(m_client);
-			// historicalData5min(m_client, contracts);
-
-			// Thread.sleep(10000);
-
-			// logger.info("Cancelling 5min historical data ");
-			// cancelHistoricalData(m_client, contracts);
-
-			// contractDetails2(m_client);
-			/* 
-			logger.info("Requesting 1min historical data ");
-			historicalData5s(m_client, contracts);
-
-			Thread.sleep(10000);
-
-			logger.info("Cancelling 1min historical data ");
-			cancelHistoricalData(m_client, contracts);
+			//contractDetails(m_client, contracts);
 			
-			*/
-			logger.info("Requesting 1min historical data ");
-			historicalData5s(m_client, contracts);
-
-			Thread.sleep(60000);
-
-			logger.info("Cancelling 1min historical data ");
-			cancelHistoricalData(m_client, contracts);
-		
+			reqRealTimeBars(m_client,contracts);
 			
-			logger.info("Requesting realtime data "); reqRealTimeBars(m_client,
-					contracts);
-		  
-			Thread.sleep(7*60*60*1000);
-		  
-			logger.info("Cancelling realtime data "); cancelRealTimeBars(m_client,
-					contracts);
+			int[] offsets = { 0 };
+
+			/*
+			for (int offset : offsets) {
+
+				historicalData5mins(m_client, contracts, offset);
+
+				Thread.sleep(60000);
+
+				logger.info("Cancelling 5min historical data ");
+				cancelHistoricalData(m_client, contracts);
+			}
 			
+			 * 
+			 * 
+			 * logger.info("Requesting 5min historical data ");
+			 * 
+			 * historicalData5min(m_client, contracts);
+			 * 
+			 * Thread.sleep(10000);
+			 * 
+			 * logger.info("Cancelling 5min historical data ");
+			 * cancelHistoricalData(m_client, contracts);
+			 * 
+			 * 
+			 * //int[] offsets = {-4,-5,-6,-7,-8,-9,-10,-11,-12,-13,-14,-15,-16,-17,-18,
+			 * -19,-20,-21,-22,-23,-24,-25,-26,-27,-28,-29,-30,-31,-32,-33};
+			 * 
+			 * //int[] offsets = {0};
+			 * 
+			 * 
+			 * 
+			 * 
+			 * 
+			 * 
+			 * 
+			 * logger.info("Requesting realtime data "); reqRealTimeBars(m_client,
+			 * contracts);
+			 * 
+			 * Thread.sleep(7*60*60*1000);
+			 * 
+			 * logger.info("Cancelling realtime data "); cancelRealTimeBars(m_client,
+			 * contracts);
+			 * 
+			 */
+
 		}
 	}
 
@@ -162,21 +176,37 @@ public class Processor {
 	 * @param client
 	 * @throws InterruptedException
 	 */
-	private void historicalData5s(EClientSocket client, List<Contract> contracts) throws InterruptedException {
+	private void historicalData5mins(EClientSocket client, List<Contract> contracts, int offset)
+			throws InterruptedException {
 
-			int offset = 0;
-			
-			Calendar cal = Calendar.getInstance();
-			
-			SimpleDateFormat form = new SimpleDateFormat("yyyyMMdd HH:mm:ss");
+		Calendar cal = Calendar.getInstance();
+		SimpleDateFormat form = new SimpleDateFormat("yyyyMMdd HH:mm:ss");
+		cal.add(Calendar.DAY_OF_MONTH, offset);
+		String formatted = form.format(cal.getTime());
+		historicalDataRequests(client, formatted, "1 D", "5 mins", contracts);
 
-			cal.add(Calendar.DAY_OF_MONTH, offset);
+	}
 
-			String formatted = form.format(cal.getTime());
+	private void historicalData1min(EClientSocket client, List<Contract> contracts, int offset)
+			throws InterruptedException {
 
-			historicalDataRequests(client, formatted, "1 D", "5 secs", contracts);
+		Calendar cal = Calendar.getInstance();
+		SimpleDateFormat form = new SimpleDateFormat("yyyyMMdd HH:mm:ss");
+		cal.add(Calendar.DAY_OF_MONTH, offset);
+		String formatted = form.format(cal.getTime());
+		historicalDataRequests(client, formatted, "1 D", "1 min", contracts);
 
-			
+	}
+	
+	private void historicalDailyData(EClientSocket client, List<Contract> contracts, int offset)
+			throws InterruptedException {
+
+		Calendar cal = Calendar.getInstance();
+		SimpleDateFormat form = new SimpleDateFormat("yyyyMMdd HH:mm:ss");
+		cal.add(Calendar.DAY_OF_MONTH, offset);
+		String formatted = form.format(cal.getTime());
+		historicalDataRequests(client, formatted, "1 Y", "1 day", contracts);
+
 	}
 
 	/**
@@ -202,6 +232,7 @@ public class Processor {
 		for (Contract ibcontract : contracts) {
 			logger.info("Cancelling historical data subscription to [ reqId : " + ibcontract.conid() + "]");
 			client.cancelHistoricalData(ibcontract.conid());
+			
 		}
 	}
 
@@ -218,6 +249,7 @@ public class Processor {
 		for (Contract ibcontract : contracts) {
 
 			client.reqHeadTimestamp(ibcontract.conid(), ibcontract, "TRADES", 0, 1);
+
 			client.cancelHeadTimestamp(ibcontract.conid());
 
 			client.reqHistoricalData(ibcontract.conid(), ibcontract, endDateTime, durationString, barSizeString,
@@ -268,116 +300,68 @@ public class Processor {
 
 		List<Contract> ibcontracts = new ArrayList<Contract>();
 
-//		Contract contract1 = new Contract();
-//		
-//		contract1.symbol("SPY");
-//		contract1.secType("STK");
-//		contract1.currency("USD");
-//		contract1.exchange("SMART");
-//		contract1.primaryExch("");
-//		
-//		ibcontracts.add(contract1);
-//		
-		Contract contract2 = new Contract();
-		contract2.symbol("SPY");
-		contract2.secType("OPT");
-		contract2.currency("USD");
-		contract2.exchange("SMART");
-		contract2.primaryExch("");		
-		contract2.lastTradeDateOrContractMonth("20220126");
-		contract2.strike(426);
-		contract2.right("P"); 
-		contract2.multiplier("100"); 
-		ibcontracts.add(contract2);
-		
-		 
-		/*
-		 * Contract contract1 = new Contract();
-		 * 
-		 * contract1.symbol("SPY"); contract1.secType("OPT"); contract1.currency("USD");
-		 * contract1.exchange("SMART");
-		 * contract1.lastTradeDateOrContractMonth("20220126"); contract1.strike(437);
-		 * contract1.right("C"); contract1.multiplier("100"); contract1.primaryExch("");
-		 * 
-		 * ibcontracts.add(contract1);
-		 * 
-		 * Contract contract2 = new Contract(); contract2.symbol("SPY");
-		 * contract2.secType("OPT"); contract2.currency("USD");
-		 * contract2.exchange("SMART");
-		 * contract2.lastTradeDateOrContractMonth("20220126"); contract2.strike(436);
-		 * contract2.right("C"); contract2.multiplier("100"); contract2.primaryExch("");
-		 * 
-		 * ibcontracts.add(contract2);
-		 * 
-		 * Contract contract3 = new Contract(); contract3.symbol("SPY");
-		 * contract3.secType("OPT"); contract3.currency("USD");
-		 * contract3.exchange("SMART");
-		 * contract3.lastTradeDateOrContractMonth("20220126"); contract3.strike(435);
-		 * contract3.right("C"); contract3.multiplier("100"); contract3.primaryExch("");
-		 * 
-		 * ibcontracts.add(contract3);
-		 * 
-		 * Contract contract10 = new Contract(); contract10.symbol("SPY");
-		 * contract10.secType("OPT"); contract10.currency("USD");
-		 * contract10.exchange("SMART");
-		 * contract10.lastTradeDateOrContractMonth("20220126"); contract10.strike(434);
-		 * contract10.right("C"); contract10.multiplier("100");
-		 * contract10.primaryExch("");
-		 * 
-		 * ibcontracts.add(contract10);
-		 * 
-		 * Contract contract4 = new Contract(); contract4.symbol("SPY");
-		 * contract4.secType("OPT"); contract4.currency("USD");
-		 * contract4.exchange("SMART");
-		 * contract4.lastTradeDateOrContractMonth("20220126"); contract4.strike(433);
-		 * contract4.right("C"); contract4.multiplier("100"); contract4.primaryExch("");
-		 * 
-		 * ibcontracts.add(contract4);
-		 * 
-		 * Contract contract9 = new Contract(); contract9.symbol("SPY");
-		 * contract9.secType("OPT"); contract9.currency("USD");
-		 * contract9.exchange("SMART");
-		 * contract9.lastTradeDateOrContractMonth("20220126"); contract9.strike(433);
-		 * contract9.right("C"); contract9.multiplier("100"); contract9.primaryExch("");
-		 * 
-		 * ibcontracts.add(contract9);
-		 * 
-		 * Contract contract5 = new Contract(); contract5.symbol("SPY");
-		 * contract5.secType("OPT"); contract5.currency("USD");
-		 * contract5.exchange("SMART");
-		 * contract5.lastTradeDateOrContractMonth("20220126"); contract5.strike(433);
-		 * contract5.right("P"); contract5.multiplier("100"); contract5.primaryExch("");
-		 * 
-		 * ibcontracts.add(contract5);
-		 * 
-		 * Contract contract6 = new Contract(); contract6.symbol("SPY");
-		 * contract6.secType("OPT"); contract6.currency("USD");
-		 * contract6.exchange("SMART");
-		 * contract6.lastTradeDateOrContractMonth("20220126"); contract6.strike(432);
-		 * contract6.right("P"); contract6.multiplier("100"); contract6.primaryExch("");
-		 * 
-		 * ibcontracts.add(contract6);
-		 * 
-		 * Contract contract7 = new Contract(); contract7.symbol("SPY");
-		 * contract7.secType("OPT"); contract7.currency("USD");
-		 * contract7.exchange("SMART");
-		 * contract7.lastTradeDateOrContractMonth("20220126"); contract7.strike(431);
-		 * contract7.right("P"); contract7.multiplier("100"); contract7.primaryExch("");
-		 * 
-		 * ibcontracts.add(contract7);
-		 * 
-		 * Contract contract8 = new Contract(); contract8.symbol("SPY");
-		 * contract8.secType("OPT"); contract8.currency("USD");
-		 * contract8.exchange("SMART");
-		 * contract8.lastTradeDateOrContractMonth("20220126"); contract8.strike(430);
-		 * contract8.right("P"); contract8.multiplier("100"); contract8.primaryExch("");
-		 * 
-		 * ibcontracts.add(contract8);
-		 * 
-		 */
-		return ibcontracts;
+		//String[] tickers = "CPB,K,SYY,MDLZ,GIS,KHC,CAG,MKC,HRL,SJM,EL,XRAY,MA,MSFT,V,DLTR,VMC,HSY,ISRG,ATVI,CRL,ETN,RMD,WM,AAPL,KDP,KR,KO,IRM,ABBV,DLR,TGT,XYL,FAST,CSCO,KMB,COST,LOW,AMD,GEN,TSN,SPG,MRNA,TAP,MRK,GOOG,LW,WYNN,PSX,T,JNJ,VTRS,UPS,TMUS,GOOGL,APTV,PEP,WMT,AVGO,CL,FIS,D,CE,GILD,JNPR,MCD,PFE,ADSK,ALGN,HAS,TRV,APA,ACN,IPG,BBWI,WBD,BLK,MNST,EXC,LIN,AMGN,EBAY,AMAT,ABT,BIIB,ED,DUK,WBA,RTX,MAR,AEP,NEE,NKE,CEG,DE,FTNT,SO,HON,TXN,GLW,APH,IBM,ORCL,NWL,ADM,LYV,AMZN,TER,PARA,CNP,DG,LLY,BA,TMO,INTC,BMY,GPN,ALB,CPRT,NEM,LVS,CMCSA,MO,VZ,BBY,BKR,DXCM,MMC,VICI,BRK.B,INTU,QCOM,TTWO,CVS,MGM,PG,FDX,AFL,ADBE,HD,PCAR,GS,KMI,ZTS,RCL,META,CARR,JPM,HPE,STX,BAC,PYPL,NDAQ,VTR,CFG,PXD,DVN,NOW,O,OXY,DAL,GM,WY,XOM,SWKS,ALK,MPC,USB,CSX,MS,WELL,LRCX,F,LEN,HPQ,MMM,WMB,OKE,BLDR,DFS,MCHP,SBUX,ADI,COF,BEN,COP,IP,AXP,UNH,XEL,HES,CVX,DIS,FCX,PCG,LUV,ULTA,AAL,ICE,C,STT,MDT,CTRA,SYF,NVDA,SCHW,AAP,CRM,PSA,VLO,WFC,FANG,JCI,MPWR,SLB,CZR,HBAN,EOG,MRO,UAL,HST,VNO,HAL,CCL,BF.B,ON,CF,WRK,MOS,NCLH,EXPE,FITB,EQT,CAT,GE,URI,EPAM,LNC,MTB,VFC,DISH,PNC,ENPH,MTCH,TFC,AES,WDC,MU,LKQ,ANET,ZION,KEY,CCI,CMA,RF,LUMN,INVH,TSLA,NFLX,ETSY,SIVB,RE,ACGL,ELV,TRGP,FDS,GMS,EQIX,FRC,ILMN,MKTX,HUM,CLX,MOH,TFX,ODFL,CHD,ORLY,MSI,BAX,MCK,CDNS,BSX,SNPS,BDX,IDXX,IT,VRTX,UNP,SEDG,WAT,INCY,TYL,CME,MTD,NSC,YUM,FE,CNC,EW,VRSK,LYB,DGX,ETR,CMG,EXR,AWK,A,DD,MSCI,ES,AZO,STZ,AKAM,OGN,NRG,SYK,CAH,AEE,APD,AJG,HCA,NTAP,RSG,REGN,VRSN,COO,WEC,TJX,PAYX,ROP,ABC,SBAC,CDW,ZBH,PPL,EIX,ANSS,ECL,GRMN,TECH,DPZ,CHRW,AMCR,AON,HOLX,KEYS,CDAY,SRE,BWA,LNT,LH,CTAS,IEX,EA,ROK,JKHY,DVA,HSIC,CB,BRO,FFIV,CI,ESS,DTE,GPC,TDY,ADP,WRB,SHW,MLM,AMT,WTW,L,AOS,SPGI,EMN,NDSN,PEG,AME,ZBRA,CSGP,AMP,EMR,ALL,PAYC,BR,TXT,ATO,MAA,CMS,FTV,ROL,ROST,NOC,MCO,CINF,BIO,PGR,STE,KLAC,WAB,DHR,NI,IQV,GL,GD,EXPD,WST,EQR,UDR,LDOS,DOV,AVB,LMT,AVY,TDG,BALL,HIG,PPG,PLD,UHS,QRVO,HII,PRU,RJF,HWM,CPT,FOXA,LHX,OTIS,JBHT,FOX,PTC,DRI,SNA,PWR,IR,KIM,TT,SEE,BKNG,MET,HLT,CTSH,AIZ,ITW,GWW,NWS,IFF,ALLE,TROW,NTRS,NWSA,PM,J,PNR,NUE,TPR,REG,PKG,OMC,RL,CBRE,BK,CMI,DOW,PNW,TRMB,MHK,NVR,DXC,FLT,PFG,ARE,TEL,CTVA,FMC,IVZ,EFX,NXPI,CTLT,RHI,POOL,PH,WHR,FRT,PEAK,AIG,SWK,DHI,PHM,GNRC,MAS,TSCO,BXP,KMX,SBNY,PKI,FISV,CHTR".split(",");
 
+		/*
+		String[] tickers = "SPY,QQQ,IWM" .split(",");
+
+		for (String ticker : tickers) {
+			Contract contract = new Contract();
+
+			contract.symbol(ticker);
+			contract.secType("STK");
+			contract.currency("USD");
+			contract.exchange("SMART");
+			contract.primaryExch("");
+
+			ibcontracts.add(contract);
+		}
+
+		return ibcontracts;
+	*/
+		
+		return getOptionContracts("SPY");
 	}
+	
+	/**
+	 * 
+	 * @param ticker
+	 * @return
+	 * @throws InterruptedException
+	 */
+	private List<Contract> getOptionContracts(String ticker) throws InterruptedException {
+
+		List<Contract> ibcontracts = new ArrayList<Contract>();
+
+		//String[] tickers = "CPB,K,SYY,MDLZ,GIS,KHC,CAG,MKC,HRL,SJM,EL,XRAY,MA,MSFT,V,DLTR,VMC,HSY,ISRG,ATVI,CRL,ETN,RMD,WM,AAPL,KDP,KR,KO,IRM,ABBV,DLR,TGT,XYL,FAST,CSCO,KMB,COST,LOW,AMD,GEN,TSN,SPG,MRNA,TAP,MRK,GOOG,LW,WYNN,PSX,T,JNJ,VTRS,UPS,TMUS,GOOGL,APTV,PEP,WMT,AVGO,CL,FIS,D,CE,GILD,JNPR,MCD,PFE,ADSK,ALGN,HAS,TRV,APA,ACN,IPG,BBWI,WBD,BLK,MNST,EXC,LIN,AMGN,EBAY,AMAT,ABT,BIIB,ED,DUK,WBA,RTX,MAR,AEP,NEE,NKE,CEG,DE,FTNT,SO,HON,TXN,GLW,APH,IBM,ORCL,NWL,ADM,LYV,AMZN,TER,PARA,CNP,DG,LLY,BA,TMO,INTC,BMY,GPN,ALB,CPRT,NEM,LVS,CMCSA,MO,VZ,BBY,BKR,DXCM,MMC,VICI,BRK.B,INTU,QCOM,TTWO,CVS,MGM,PG,FDX,AFL,ADBE,HD,PCAR,GS,KMI,ZTS,RCL,META,CARR,JPM,HPE,STX,BAC,PYPL,NDAQ,VTR,CFG,PXD,DVN,NOW,O,OXY,DAL,GM,WY,XOM,SWKS,ALK,MPC,USB,CSX,MS,WELL,LRCX,F,LEN,HPQ,MMM,WMB,OKE,BLDR,DFS,MCHP,SBUX,ADI,COF,BEN,COP,IP,AXP,UNH,XEL,HES,CVX,DIS,FCX,PCG,LUV,ULTA,AAL,ICE,C,STT,MDT,CTRA,SYF,NVDA,SCHW,AAP,CRM,PSA,VLO,WFC,FANG,JCI,MPWR,SLB,CZR,HBAN,EOG,MRO,UAL,HST,VNO,HAL,CCL,BF.B,ON,CF,WRK,MOS,NCLH,EXPE,FITB,EQT,CAT,GE,URI,EPAM,LNC,MTB,VFC,DISH,PNC,ENPH,MTCH,TFC,AES,WDC,MU,LKQ,ANET,ZION,KEY,CCI,CMA,RF,LUMN,INVH,TSLA,NFLX,ETSY,SIVB,RE,ACGL,ELV,TRGP,FDS,GMS,EQIX,FRC,ILMN,MKTX,HUM,CLX,MOH,TFX,ODFL,CHD,ORLY,MSI,BAX,MCK,CDNS,BSX,SNPS,BDX,IDXX,IT,VRTX,UNP,SEDG,WAT,INCY,TYL,CME,MTD,NSC,YUM,FE,CNC,EW,VRSK,LYB,DGX,ETR,CMG,EXR,AWK,A,DD,MSCI,ES,AZO,STZ,AKAM,OGN,NRG,SYK,CAH,AEE,APD,AJG,HCA,NTAP,RSG,REGN,VRSN,COO,WEC,TJX,PAYX,ROP,ABC,SBAC,CDW,ZBH,PPL,EIX,ANSS,ECL,GRMN,TECH,DPZ,CHRW,AMCR,AON,HOLX,KEYS,CDAY,SRE,BWA,LNT,LH,CTAS,IEX,EA,ROK,JKHY,DVA,HSIC,CB,BRO,FFIV,CI,ESS,DTE,GPC,TDY,ADP,WRB,SHW,MLM,AMT,WTW,L,AOS,SPGI,EMN,NDSN,PEG,AME,ZBRA,CSGP,AMP,EMR,ALL,PAYC,BR,TXT,ATO,MAA,CMS,FTV,ROL,ROST,NOC,MCO,CINF,BIO,PGR,STE,KLAC,WAB,DHR,NI,IQV,GL,GD,EXPD,WST,EQR,UDR,LDOS,DOV,AVB,LMT,AVY,TDG,BALL,HIG,PPG,PLD,UHS,QRVO,HII,PRU,RJF,HWM,CPT,FOXA,LHX,OTIS,JBHT,FOX,PTC,DRI,SNA,PWR,IR,KIM,TT,SEE,BKNG,MET,HLT,CTSH,AIZ,ITW,GWW,NWS,IFF,ALLE,TROW,NTRS,NWSA,PM,J,PNR,NUE,TPR,REG,PKG,OMC,RL,CBRE,BK,CMI,DOW,PNW,TRMB,MHK,NVR,DXC,FLT,PFG,ARE,TEL,CTVA,FMC,IVZ,EFX,NXPI,CTLT,RHI,POOL,PH,WHR,FRT,PEAK,AIG,SWK,DHI,PHM,GNRC,MAS,TSCO,BXP,KMX,SBNY,PKI,FISV,CHTR".split(",");
+		int[] strikes = {425,426,427,428,429,430};
+		
+		String[] rights = {"C","P"};
+		
+		for (int strike : strikes) {
+			
+			Contract contract;
+
+			for (String optRight : rights) {
+				contract = new Contract();
+				contract.symbol(ticker);
+				contract.secType("OPT");
+				contract.currency("USD");
+				contract.exchange("SMART");
+				contract.secType("OPT");
+				contract.lastTradeDateOrContractMonth("20230609");
+				contract.right(optRight);
+				contract.strike(strike);
+				contract.multiplier("100");
+				
+				ibcontracts.add(contract);
+			}
+			
+		}
+
+		return ibcontracts;
+	}
+
 
 	private static void pnl(EClientSocket client) throws InterruptedException {
 		// ! [reqpnl]
@@ -420,7 +404,21 @@ public class Processor {
 	 */
 	private List<Contract> getIBContracts() throws InterruptedException {
 
-		List<com.interactivebrokers.twstrading.domain.Contract> contracts = contractManager.getActiveContracts();
+		List<com.interactivebrokers.twstrading.domain.Contract> contracts = new ArrayList<com.interactivebrokers.twstrading.domain.Contract>();
+
+		if (tickerIdStr != null && !tickerIdStr.trim().equalsIgnoreCase("")) {
+			com.interactivebrokers.twstrading.domain.Contract contract = contractManager
+					.getContractToTrade(Long.valueOf(tickerIdStr));
+
+			if (contract != null) {
+				contracts.add(contract);
+			}
+		}
+
+		if (contracts.isEmpty()) {
+			contracts = contractManager.getActiveContracts();
+		}
+
 		if (contracts == null || contracts.isEmpty()) {
 			return getContracts();
 		}
@@ -428,18 +426,22 @@ public class Processor {
 		List<Contract> ibcontracts = new ArrayList<Contract>(contracts.size());
 
 		for (com.interactivebrokers.twstrading.domain.Contract contract : contracts) {
-			Contract ibcontract = new Contract();
-			ibcontract.conid(contract.getTickerId().intValue());
-			ibcontract.symbol(contract.getSymbol());
-			ibcontract.secType(contract.getSecType());
-			ibcontract.currency(contract.getCurrency());
-			ibcontract.exchange(contract.getConExchange());
-			ibcontract.primaryExch(contract.getPrimaryExchange());
-			ibcontract.strike(contract.getStrike());
-			ibcontract.right(contract.getOptRight());
-			ibcontract.lastTradeDateOrContractMonth(contract.getLastTradedateOrContractMonth());
 
-			ibcontracts.add(ibcontract);
+			if (!contract.isHistoReceived()) {
+				Contract ibcontract = new Contract();
+
+				ibcontract.conid(contract.getTickerId().intValue());
+				ibcontract.symbol(contract.getSymbol());
+				ibcontract.secType(contract.getSecType());
+				ibcontract.currency(contract.getCurrency());
+				ibcontract.exchange(contract.getConExchange());
+				ibcontract.primaryExch(contract.getPrimaryExchange());
+				ibcontract.strike(contract.getStrike());
+				ibcontract.right(contract.getOptRight());
+				ibcontract.lastTradeDateOrContractMonth(contract.getLastTradedateOrContractMonth());
+
+				ibcontracts.add(ibcontract);
+			}
 		}
 
 		return ibcontracts;
